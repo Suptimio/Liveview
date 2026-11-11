@@ -271,6 +271,27 @@ try {
     revealSyntax(editor);
     if (selection) restoreSelection(editor, selection);
   }
+
+  editor.addEventListener("pointerdown", (event: PointerEvent) => {
+    if (!(event.target instanceof Element)) return;
+    const rule = event.target.closest<HTMLElement>('[data-syntax="thematic_break"]');
+    if (!rule || !editor.contains(rule)) return;
+    const text = document.createTreeWalker(rule, NodeFilter.SHOW_TEXT).nextNode();
+    if (!(text instanceof Text)) return;
+
+    event.preventDefault();
+    editor.focus();
+    const bounds = rule.getBoundingClientRect();
+    const position =
+      bounds.width === 0
+        ? 0
+        : Math.round(
+            (Math.max(0, Math.min(event.clientX - bounds.left, bounds.width)) / bounds.width) *
+              text.length,
+          );
+    window.getSelection()?.setBaseAndExtent(text, position, text, position);
+    syncActiveLine();
+  });
   document.addEventListener("selectionchange", syncActiveLine);
   editor.addEventListener("blur", syncActiveLine);
   editor.addEventListener("keydown", (event) => {

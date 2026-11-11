@@ -19,7 +19,7 @@ const voidTags = new Set([
   "wbr",
 ]);
 
-const lineEndingNodes = new Set(["atx_heading", "list_item", "paragraph"]);
+const lineEndingNodes = new Set(["atx_heading", "list_item", "paragraph", "thematic_break"]);
 
 function htmlEnd(source: string, start: number) {
   const opening = source
@@ -263,6 +263,13 @@ export async function createMarkdown() {
           preview: { kind: "html", source: html },
         };
       }
+      if (node.type === "thematic_break") {
+        const endIndex = node.endIndex - lineEndingLength(node.endIndex);
+        return {
+          type: "thematic_break",
+          children: [source.slice(node.startIndex, endIndex)],
+        };
+      }
       if (node.type === "image") {
         const destination = node.namedChildren.find((child) => child.type === "link_destination");
         if (destination) {
@@ -299,6 +306,16 @@ export async function createMarkdown() {
           type: node.type,
           children: [source.slice(node.startIndex, end)],
           preview: { kind: "table", rows, align },
+        };
+      }
+      if (
+        node.type === "paragraph" &&
+        node.endIndex === source.length &&
+        /^[ \t]{0,3}(?:-[ \t]*){3,}$/.test(source.slice(node.startIndex, node.endIndex))
+      ) {
+        return {
+          type: "thematic_break",
+          children: [source.slice(node.startIndex, node.endIndex)],
         };
       }
       if (
