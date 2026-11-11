@@ -1,0 +1,34 @@
+:root[data-profile="github"] {
+  --profile-font: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Helvetica, Arial, sans-serif;
+
+  --content-width: 1012px;
+  --content-padding-x: 32px;
+  --content-padding-top: 32px;
+  --content-padding-bottom: 64px;
+  --content-font-size: 16px;
+  --content-line-height: 1.5;
+
+  --editor-border: transparent;
+  --editor-radius: 0;
+  --editor-padding: 0;
+}
+
+:root[data-profile="github"] #editor [data-syntax="atx_heading"] {
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="strong_emphasis"] {
+  font-weight: 600;
+}
+
+:root[data-profile="github"] #editor [data-syntax="block_quote"] {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="code_span"],
+:root[data-profile="github"] #editor [data-syntax="fenced_code_block"] {
+  border-radius: 6px;
+}

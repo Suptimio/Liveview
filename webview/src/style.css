@@ -1,0 +1,179 @@
+@import "./syntax.css";
+@import "./profiles/gitlab.css";
+@import "./profiles/vscode.css";
+
+:root {
+  font-family: var(--profile-font, Inter, ui-sans-serif, system-ui, sans-serif);
+  color: var(--foreground);
+  background: var(--background);
+  color-scheme: light dark;
+  font-synthesis: none;
+
+  --content-width: 1000px;
+  --content-padding-x: 28px;
+  --content-padding-top: 32px;
+  --content-padding-bottom: 80px;
+  --content-font-size: 16px;
+  --content-line-height: 1.8;
+  --editor-border: transparent;
+  --editor-radius: 0;
+  --editor-padding: 0;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+main {
+  box-sizing: border-box;
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--content-padding-top) var(--content-padding-x) var(--content-padding-bottom);
+  padding-top: 76px;
+}
+
+.toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 28px;
+  margin: 0;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+  transform: translateY(0);
+  transition: transform 200ms ease;
+}
+
+.toolbar.is-collapsed {
+  transform: translateY(calc(-100% + 6px));
+}
+
+.toolbar:hover,
+.toolbar:focus-within {
+  transform: translateY(0);
+}
+
+.app-title {
+  font-weight: 650;
+  font-size: 18px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.toolbar button {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+  cursor: pointer;
+}
+
+.toolbar select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.toolbar label {
+  color: var(--muted);
+}
+
+.toolbar button[aria-pressed="true"] {
+  border-color: var(--foreground);
+  outline: 1px solid var(--foreground);
+}
+
+.paper {
+  box-sizing: border-box;
+  min-height: 70vh;
+  padding: 40px;
+  border: 1px solid #d6d6d6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #24292f;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 8%);
+}
+
+.paper[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #24292f;
+  --heading: #1f2328;
+  --muted: #656d76;
+  --surface: #f6f8fa;
+  --border: #d1d9e0;
+  --accent: #0969da;
+  --code: #8250df;
+  --selection: #b6d7ff;
+  --marker: #656d76;
+
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.paper[data-theme="dark"] {
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --heading: #f0f6fc;
+  --muted: #9198a1;
+  --surface: #161b22;
+  --border: #30363d;
+  --accent: #44f8a1;
+  --code: #d2a8ff;
+  --selection: #264f78;
+  --marker: #9198a1;
+
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@media (max-width: 600px) {
+  .paper {
+    padding: 20px;
+  }
+}
+
+#editor {
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  outline: none;
+  min-height: 60vh;
+  line-height: var(--content-line-height);
+  font-size: var(--content-font-size);
+  caret-color: var(--accent);
+  border: 1px solid var(--editor-border);
+  border-radius: var(--editor-radius);
+  padding: var(--editor-padding);
+}
+
+#editor [data-caret-placeholder] {
+  white-space: pre;
+}
+
+#editor::selection,
+#editor *::selection {
+  background: var(--selection);
+}
+
+.editor-error {
+  padding: 16px;
+  border: 1px solid #d1242f;
+  border-radius: 6px;
+  color: #d1242f;
+  white-space: pre-wrap;
+}

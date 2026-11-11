@@ -1,0 +1,33 @@
+:root[data-profile="vscode"] {
+  --profile-font: var(--vscode-editor-font-family, Consolas, monospace);
+  --content-width: 1100px;
+  --content-font-size: 15px;
+  --content-line-height: 1.7;
+  --editor-border: var(--border);
+  --editor-radius: 4px;
+  --editor-padding: 14px;
+}
+
+:root[data-profile="vscode"] .paper[data-theme="light"] {
+  --background: var(--vscode-editor-background, #ffffff);
+  --foreground: var(--vscode-editor-foreground, #24292f);
+  --heading: var(--vscode-editor-foreground, #1f2328);
+  --muted: var(--vscode-descriptionForeground, #656d76);
+  --surface: var(--vscode-editorWidget-background, #f6f8fa);
+  --border: var(--vscode-panel-border, #d1d9e0);
+  --accent: var(--vscode-textLink-foreground, #0969da);
+  --code: var(--vscode-symbolIcon-functionForeground, #8250df);
+  --selection: var(--vscode-editor-selectionBackground, #b6d7ff);
+}
+
+:root[data-profile="vscode"] .paper[data-theme="dark"] {
+  --background: var(--vscode-editor-background, #0d1117);
+  --foreground: var(--vscode-editor-foreground, #e6edf3);
+  --heading: var(--vscode-editor-foreground, #f0f6fc);
+  --muted: var(--vscode-descriptionForeground, #9198a1);
+  --surface: var(--vscode-editorWidget-background, #161b22);
+  --border: var(--vscode-panel-border, #30363d);
+  --accent: var(--vscode-textLink-foreground, #44f8a1);
+  --code: var(--vscode-symbolIcon-functionForeground, #d2a8ff);
+  --selection: var(--vscode-editor-selectionBackground, #264f78);
+}

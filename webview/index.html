@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Viewlife Markdown</title>
+</head>
+
+<body>
+  <main>
+    <header class="toolbar">
+      <div class="app-title">Viewlife</div>
+
+      <div class="toolbar-actions">
+        <label for="profile-select">Style</label>
+        <select id="profile-select" aria-label="Markdown style">
+          <option value="github">GitHub</option>
+          <option value="gitlab">GitLab</option>
+          <option value="vscode">VS Code</option>
+        </select>
+        <button type="button" id="theme-light" aria-pressed="true">
+          Light
+        </button>
+        <button type="button" id="theme-dark" aria-pressed="false">
+          Dark
+        </button>
+      </div>
+    </header>
+
+    <section class="paper" id="paper" data-theme="light">
+      <div id="editor" role="textbox" aria-label="Markdown editor" aria-multiline="true" spellcheck="false">
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>

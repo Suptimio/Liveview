@@ -1,0 +1,84 @@
+{
+  "name": "viewlife",
+  "displayName": "Viewlife",
+  "license": "Zlib",
+  "description": "Live Markdown render and editor for VS Code",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.145.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCustomEditor:viewlife.markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "viewlife.markdown",
+        "displayName": "Viewlife Markdown",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          },
+          {
+            "filenamePattern": "*.markdown"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "configuration": {
+      "title": "Viewlife",
+      "properties": {
+        "viewlife.customStylesheets": {
+          "type": "array",
+          "scope": "resource",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional CSS files applied to Markdown in Viewlife. Paths are absolute or relative to the workspace."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build:webview": "vite build --config vite.config.mjs",
+    "vscode:prepublish": "pnpm run package",
+    "dev": "pnpm run build:webview && pnpm run check-types && pnpm run lint && node esbuild.js",
+    "compile": "pnpm run build:webview && pnpm run check-types && pnpm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "pnpm run build:webview && pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+    "check-types": "tsc --noEmit && tsc --project webview/tsconfig.json",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.145.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "typescript-eslint": "^8.61.1",
+    "eslint": "^10.5.0",
+    "esbuild": "^0.28.1",
+    "vite": "^8.3.5",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^6.0.3",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0"
+  },
+  "dependencies": {
+    "web-tree-sitter": "0.27.1"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.0.6"
+  }
+}

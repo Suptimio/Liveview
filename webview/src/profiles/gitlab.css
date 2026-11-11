@@ -1,0 +1,15 @@
+:root[data-profile="gitlab"] {
+  --profile-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --content-width: 1040px;
+  --content-line-height: 1.65;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"] {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25em;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="block_quote"] {
+  border-left: 4px solid var(--accent);
+  padding-left: 1em;
+}
