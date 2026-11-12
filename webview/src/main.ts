@@ -1,9 +1,20 @@
 import { createMarkdown } from "./markdown";
 import { readEditorText, readSelection, restoreSelection, revealSyntax } from "./selection";
 import { patch } from "./vdom";
-import { setRenderProfile, type RenderProfile } from "./profiles";
+import { isRenderProfile, setRenderProfile, type RenderProfile } from "./profiles";
 import { setTheme } from "./theme";
+import githubProfileCss from "./profiles/github.css?inline";
+import gitlabProfileCss from "./profiles/gitlab.css?inline";
+import vscodeProfileCss from "./profiles/vscode.css?inline";
 import "./style.css";
+import "./ui.css";
+
+const profileCss: Record<RenderProfile, string> = {
+  basic: "",
+  github: githubProfileCss,
+  gitlab: gitlabProfileCss,
+  vscode: vscodeProfileCss,
+};
 
 type HostMessage =
   | { type: "document"; text: string; baseUri: string; version: number }
@@ -11,12 +22,121 @@ type HostMessage =
 
 type EditMessage = { type: "edit"; previousText: string; text: string };
 type ExtensionMessage = EditMessage | { type: "ready" } | { type: "error"; message: string };
+type WebviewState = {
+  profile?: RenderProfile;
+  customCss?: string;
+  cssDraft?: string;
+};
 
 declare function acquireVsCodeApi(): {
   postMessage(message: ExtensionMessage): void;
-  getState(): { profile?: RenderProfile } | undefined;
-  setState(state: { profile: RenderProfile }): void;
+  getState(): WebviewState | undefined;
+  setState(state: WebviewState): void;
 };
+
+const exampleCss = `:root {
+  --content-width: 860px;
+  --content-font-size: 16px;
+  --content-line-height: 1.65;
+  --paper-padding: 32px;
+  --paper-border: 1px solid #d0d7de;
+  --paper-border-radius: 14px;
+  --paper-shadow: 0 12px 30px rgb(31 35 40 / 12%);
+}
+
+#editor [data-syntax="atx_heading"][data-level="1"] {
+  letter-spacing: -0.035em;
+}
+
+#editor [data-syntax="block_quote"] {
+  border-left: 4px solid var(--accent);
+  padding-left: 1em;
+}
+
+#editor [data-syntax="code_span"] {
+  padding: 0.15em 0.4em;
+}`;
+
+const previewBaseCss = `
+:root {
+  --background: #ffffff;
+  --foreground: #24292f;
+  --heading: #1f2328;
+  --muted: #656d76;
+  --surface: #f6f8fa;
+  --border: #d1d9e0;
+  --accent: #0969da;
+  --code: #8250df;
+  --content-font-size: 16px;
+  --content-line-height: 1.6;
+  --paper-padding: 24px;
+  --paper-border: 1px solid var(--border);
+  --paper-border-radius: 6px;
+  --paper-shadow: none;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 14px;
+  background: #eef0f3;
+  color: var(--foreground);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body[data-theme="dark"] { background: #15191f; }
+.paper {
+  min-height: 270px;
+  padding: var(--paper-padding);
+  border: var(--paper-border);
+  border-radius: var(--paper-border-radius);
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: var(--paper-shadow);
+}
+.paper[data-theme="dark"] {
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --heading: #f0f6fc;
+  --muted: #9198a1;
+  --surface: #161b22;
+  --border: #30363d;
+  --accent: #44f8a1;
+  --code: #d2a8ff;
+}
+#editor {
+  font-size: var(--content-font-size);
+  line-height: var(--content-line-height);
+}
+[data-syntax="atx_heading"] { color: var(--heading); font-weight: 650; }
+[data-syntax="atx_heading"][data-level="1"] { font-size: 2em; line-height: 1.25; }
+[data-syntax="strong_emphasis"] { color: var(--heading); font-weight: 700; }
+[data-syntax="emphasis"] { font-style: italic; }
+[data-syntax="block_quote"] { color: var(--muted); font-style: italic; }
+[data-syntax="code_span"], [data-syntax="fenced_code_block"] {
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--code);
+  font-family: ui-monospace, monospace;
+}
+[data-syntax="inline_link"] { color: var(--accent); text-decoration: underline; }
+[data-syntax="thematic_break"] { border: 0; border-top: 1px solid var(--border); }
+li { margin: 0.2em 0; }
+table { border-collapse: collapse; }
+th, td { padding: 5px 9px; border: 1px solid var(--border); }
+`;
+
+const previewMarkup = `<section class="paper" data-theme="light">
+  <div id="editor">
+    <h1 data-syntax="atx_heading" data-level="1">A little paper preview</h1>
+    <p>A <span data-syntax="strong_emphasis">styled document</span> with <span data-syntax="emphasis">Markdown</span> content.</p>
+    <p>Links, <span data-syntax="inline_link">code spans</span>, and more can be styled here.</p>
+    <blockquote data-syntax="block_quote">A quote gives the CSS something else to work with.</blockquote>
+    <p>Example code: <code data-syntax="code_span">const style = "yours";</code></p>
+    <ul><li>Headings and text</li><li>Lists and quotes</li><li>Tables and code</li></ul>
+    <table><tr><th>Property</th><th>Value</th></tr><tr><td>Paper</td><td>Custom</td></tr></table>
+    <hr data-syntax="thematic_break">
+    <p>Change the CSS on the left to update this preview.</p>
+  </div>
+</section>`;
 
 const vscode = acquireVsCodeApi();
 function element(id: string): HTMLElement {
@@ -28,12 +148,77 @@ function element(id: string): HTMLElement {
 const editor = element("editor");
 const lightButton = element("theme-light");
 const darkButton = element("theme-dark");
+const profileButtons = document.querySelectorAll<HTMLButtonElement>(".profile-button");
+const styleMenuToggle = element("style-menu-toggle");
+const styleMenuPanel = element("style-menu-panel");
+const customCssEditor = element("custom-css-editor") as HTMLTextAreaElement;
+const customCssFile = element("custom-css-file") as HTMLInputElement;
+const importCssButton = element("import-css");
+const loadExampleButton = element("load-css-example");
+const applyCssButton = element("apply-custom-css");
+const cssStatus = element("custom-css-status");
+const cssPreview = element("custom-css-preview") as HTMLIFrameElement;
 const toolbarElement = document.querySelector<HTMLElement>(".toolbar");
 if (!toolbarElement) throw new Error("Missing .toolbar.");
 const toolbar: HTMLElement = toolbarElement;
-const profileSelect = element("profile-select") as HTMLSelectElement;
 const customStyles = document.createElement("style");
 document.head.append(customStyles);
+const savedState = vscode.getState();
+let activeProfile: RenderProfile = isRenderProfile(savedState?.profile) ? savedState.profile : "basic";
+let activeCustomCss = typeof savedState?.customCss === "string" ? savedState.customCss : "";
+let cssDraft =
+  typeof savedState?.cssDraft === "string"
+    ? savedState.cssDraft
+    : activeCustomCss || exampleCss;
+let previewProfile = activeProfile;
+let externalStylesheets: { name: string; text: string }[] = [];
+
+customCssEditor.value = cssDraft;
+
+function persistStyleState(): void {
+  vscode.setState({
+    profile: activeProfile,
+    customCss: activeCustomCss,
+    cssDraft,
+  });
+}
+
+function renderCssPreview(css: string, profile = previewProfile): void {
+  const theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  const safeCss = `${profileCss[profile]}\n${css}`.replaceAll("<", "\\3C ");
+  cssPreview.srcdoc = `<!doctype html>
+<html lang="en" data-profile="${profile}">
+<head>
+  <meta charset="UTF-8">
+  <style>${previewBaseCss}\n${safeCss}</style>
+</head>
+<body data-theme="${theme}">
+  ${previewMarkup.replace('data-theme="light"', `data-theme="${theme}"`)}
+</body>
+</html>`;
+}
+
+function applyStylesheets(): void {
+  const configuredCss = externalStylesheets
+    .map(
+      (stylesheet) =>
+        `/* ${stylesheet.name.replaceAll("*/", "* /")} */\n${stylesheet.text}`,
+    )
+    .join("\n");
+  customStyles.textContent = [configuredCss, activeCustomCss].filter(Boolean).join("\n");
+}
+
+function updateCssDraft(status: string): void {
+  cssDraft = customCssEditor.value;
+  persistStyleState();
+  renderCssPreview(cssDraft || exampleCss);
+  cssStatus.textContent = status;
+}
+
+function setStyleMenuOpen(open: boolean): void {
+  styleMenuPanel.hidden = !open;
+  styleMenuToggle.setAttribute("aria-expanded", String(open));
+}
 
 let pendingSend: number | undefined;
 let pendingEdit: EditMessage | undefined;
@@ -59,10 +244,32 @@ toolbar.addEventListener("mouseenter", expandToolbar);
 toolbar.addEventListener("mouseleave", collapseToolbarLater);
 collapseToolbarLater();
 
+styleMenuToggle.addEventListener("click", () => {
+  const open = styleMenuPanel.hasAttribute("hidden");
+  setStyleMenuOpen(open);
+  if (open) expandToolbar();
+});
+document.addEventListener("pointerdown", (event) => {
+  if (
+    event.target instanceof Node &&
+    !styleMenuPanel.contains(event.target) &&
+    !styleMenuToggle.contains(event.target)
+  ) {
+    setStyleMenuOpen(false);
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !styleMenuPanel.hidden) {
+    setStyleMenuOpen(false);
+    styleMenuToggle.focus();
+  }
+});
+
 function updateThemeButtons(): void {
   const isDark = document.documentElement.dataset.theme === "dark";
   lightButton.setAttribute("aria-pressed", String(!isDark));
   darkButton.setAttribute("aria-pressed", String(isDark));
+  renderCssPreview(cssDraft || exampleCss);
 }
 
 lightButton.addEventListener("click", () => {
@@ -75,15 +282,84 @@ darkButton.addEventListener("click", () => {
 });
 updateThemeButtons();
 
-const savedProfile = vscode.getState()?.profile;
-const initialProfile =
-  savedProfile && ["github", "gitlab", "vscode"].includes(savedProfile) ? savedProfile : "github";
-profileSelect.value = initialProfile;
-setRenderProfile(initialProfile);
-profileSelect.addEventListener("change", () => {
-  const profile = profileSelect.value as RenderProfile;
-  setRenderProfile(profile);
-  vscode.setState({ profile });
+setRenderProfile(activeProfile);
+function updateProfileButtons(profile: RenderProfile): void {
+  for (const button of profileButtons) {
+    button.setAttribute("aria-pressed", String(button.dataset.profile === profile));
+  }
+}
+updateProfileButtons(activeProfile);
+
+function showProfilePreview(profile: RenderProfile): void {
+  previewProfile = profile;
+  renderCssPreview(cssDraft || exampleCss, profile);
+}
+
+function restoreActiveProfilePreview(): void {
+  window.requestAnimationFrame(() => {
+    if (
+      document.querySelector(
+        ".profile-button:hover, .profile-button:focus-visible, .css-preview-container:hover, .css-preview-container:focus-within",
+      )
+    )
+      return;
+    showProfilePreview(activeProfile);
+  });
+}
+
+for (const button of profileButtons) {
+  const profile = button.dataset.profile;
+  if (!isRenderProfile(profile)) {
+    throw new Error(`Unknown render profile: ${profile}`);
+  }
+  button.addEventListener("pointerenter", () => showProfilePreview(profile));
+  button.addEventListener("pointerleave", restoreActiveProfilePreview);
+  button.addEventListener("focus", () => showProfilePreview(profile));
+  button.addEventListener("blur", restoreActiveProfilePreview);
+  button.addEventListener("click", () => {
+    setRenderProfile(profile);
+    activeProfile = profile;
+    previewProfile = profile;
+    persistStyleState();
+    updateProfileButtons(profile);
+    renderCssPreview(cssDraft || exampleCss, profile);
+  });
+}
+
+applyStylesheets();
+renderCssPreview(cssDraft || exampleCss);
+customCssEditor.addEventListener("input", () => {
+  updateCssDraft("Preview updated. Apply the CSS to change the paper.");
+});
+importCssButton.addEventListener("click", () => customCssFile.click());
+customCssFile.addEventListener("change", () => {
+  const file = customCssFile.files?.[0];
+  if (!file) return;
+  void file
+    .text()
+    .then((text) => {
+      customCssEditor.value = text;
+      updateCssDraft(`Loaded ${file.name} into the editor. Apply it to change the paper.`);
+    })
+    .catch((error: unknown) => {
+      console.error("Could not import CSS file.", error);
+      cssStatus.textContent = `Could not import CSS file: ${String(error)}`;
+    })
+    .finally(() => {
+      customCssFile.value = "";
+    });
+});
+loadExampleButton.addEventListener("click", () => {
+  customCssEditor.value = exampleCss;
+  updateCssDraft("Example loaded. Apply it to change the paper.");
+});
+applyCssButton.addEventListener("click", () => {
+  activeCustomCss = cssDraft;
+  applyStylesheets();
+  persistStyleState();
+  cssStatus.textContent = activeCustomCss
+    ? "Custom CSS applied to the paper."
+    : "Custom CSS cleared from the paper.";
 });
 
 try {
@@ -198,9 +474,8 @@ try {
       }
       return;
     }
-    customStyles.textContent = message.stylesheets
-      .map((stylesheet) => `/* ${stylesheet.name.replaceAll("*/", "* /")} */\n${stylesheet.text}`)
-      .join("\n");
+    externalStylesheets = message.stylesheets;
+    applyStylesheets();
   });
   vscode.postMessage({ type: "ready" });
 

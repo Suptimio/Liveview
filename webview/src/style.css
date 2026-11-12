@@ -1,4 +1,5 @@
 @import "./syntax.css";
+@import "./profiles/github.css";
 @import "./profiles/gitlab.css";
 @import "./profiles/vscode.css";
 
@@ -15,98 +16,25 @@
   --content-padding-bottom: 80px;
   --content-font-size: 16px;
   --content-line-height: 1.8;
+  --paper-min-height: 70vh;
+  --paper-padding: 40px;
+  --paper-border: 1px solid #d6d6d6;
+  --paper-border-radius: 8px;
+  --paper-shadow: 0 4px 18px rgb(0 0 0 / 8%);
   --editor-border: transparent;
   --editor-radius: 0;
   --editor-padding: 0;
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-}
-
-main {
-  box-sizing: border-box;
-  max-width: var(--content-width);
-  margin: 0 auto;
-  padding: var(--content-padding-top) var(--content-padding-x) var(--content-padding-bottom);
-  padding-top: 76px;
-}
-
-.toolbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 28px;
-  margin: 0;
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  transform: translateY(0);
-  transition: transform 200ms ease;
-}
-
-.toolbar.is-collapsed {
-  transform: translateY(calc(-100% + 6px));
-}
-
-.toolbar:hover,
-.toolbar:focus-within {
-  transform: translateY(0);
-}
-
-.app-title {
-  font-weight: 650;
-  font-size: 18px;
-}
-
-.toolbar-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.toolbar button {
-  padding: 7px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--foreground);
-  font: inherit;
-  cursor: pointer;
-}
-
-.toolbar select {
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--foreground);
-  font: inherit;
-}
-
-.toolbar label {
-  color: var(--muted);
-}
-
-.toolbar button[aria-pressed="true"] {
-  border-color: var(--foreground);
-  outline: 1px solid var(--foreground);
-}
-
 .paper {
   box-sizing: border-box;
-  min-height: 70vh;
-  padding: 40px;
-  border: 1px solid #d6d6d6;
-  border-radius: 8px;
+  min-height: var(--paper-min-height);
+  padding: var(--paper-padding);
+  border: var(--paper-border);
+  border-radius: var(--paper-border-radius);
   background: #ffffff;
   color: #24292f;
-  box-shadow: 0 4px 18px rgb(0 0 0 / 8%);
+  box-shadow: var(--paper-shadow);
 }
 
 .paper[data-theme="light"] {
@@ -142,8 +70,8 @@ main {
 }
 
 @media (max-width: 600px) {
-  .paper {
-    padding: 20px;
+  :root {
+    --paper-padding: 20px;
   }
 }
 
@@ -168,12 +96,4 @@ main {
 #editor::selection,
 #editor *::selection {
   background: var(--selection);
-}
-
-.editor-error {
-  padding: 16px;
-  border: 1px solid #d1242f;
-  border-radius: 6px;
-  color: #d1242f;
-  white-space: pre-wrap;
 }

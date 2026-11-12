@@ -13,18 +13,75 @@
       <div class="app-title">Viewlife</div>
 
       <div class="toolbar-actions">
-        <label for="profile-select">Style</label>
-        <select id="profile-select" aria-label="Markdown style">
-          <option value="github">GitHub</option>
-          <option value="gitlab">GitLab</option>
-          <option value="vscode">VS Code</option>
-        </select>
         <button type="button" id="theme-light" aria-pressed="true">
           Light
         </button>
         <button type="button" id="theme-dark" aria-pressed="false">
           Dark
         </button>
+        <div class="style-menu">
+          <button
+            type="button"
+            id="style-menu-toggle"
+            aria-label="Open style menu"
+            aria-expanded="false"
+            aria-controls="style-menu-panel"
+            title="Styles"
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+            <span>Styles</span>
+          </button>
+          <section id="style-menu-panel" class="style-menu-panel" aria-label="Styles" hidden>
+            <div class="style-menu-section">
+              <h2>CSS profile</h2>
+              <div class="profile-actions" role="group" aria-label="CSS profile">
+                <button type="button" class="profile-button" data-profile="basic" aria-pressed="true">
+                  Basic
+                </button>
+                <button type="button" class="profile-button" data-profile="github" aria-pressed="false">
+                  GitHub
+                </button>
+                <button type="button" class="profile-button" data-profile="gitlab" aria-pressed="false">
+                  GitLab
+                </button>
+                <button type="button" class="profile-button" data-profile="vscode" aria-pressed="false">
+                  VS Code
+                </button>
+              </div>
+            </div>
+
+            <div class="css-preview-container">
+              <h3>Live preview</h3>
+              <iframe
+                id="custom-css-preview"
+                title="Live preview of selected CSS profile"
+                sandbox
+              ></iframe>
+            </div>
+
+            <div class="style-menu-section">
+              <div class="custom-css-header">
+                <div>
+                  <h2>Custom CSS</h2>
+                  <p>Edit the example or import a CSS file. Preview changes before applying them.</p>
+                </div>
+                <div class="custom-css-actions">
+                  <input id="custom-css-file" type="file" accept=".css,text/css" hidden />
+                  <button type="button" id="import-css">Import your own CSS</button>
+                  <button type="button" id="load-css-example">Load example</button>
+                  <button type="button" id="apply-custom-css">Apply to paper</button>
+                </div>
+              </div>
+              <div class="custom-css-workbench">
+                <label class="css-editor-label" for="custom-css-editor">CSS editor</label>
+                <textarea id="custom-css-editor" spellcheck="false" aria-label="Custom CSS"></textarea>
+              </div>
+              <p id="custom-css-status" role="status" aria-live="polite"></p>
+            </div>
+          </section>
+        </div>
       </div>
     </header>
 

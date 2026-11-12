@@ -5,7 +5,9 @@ Viewlife opens `.md` and `.markdown` files directly as a live WYSIWYG editor in 
 ## Features
 
 - Direct Markdown editor with live rendering and inline Markdown editing
-- GitHub, GitLab, and VS Code style profiles, plus light and dark themes
+- A Basic style and selectable local GitHub, GitLab, and VS Code style profiles, plus light and dark themes
+- A style menu with an editable CSS example, CSS file import, and live mini-paper preview
+- Separate UI styling in `webview/src/ui.css`, independent of the paper styles in `webview/src/style.css`
 - Additional CSS files, reloaded while editing or saving CSS in VS Code
 - Images, tables, lists, and common Markdown syntax rendered in the document
 
@@ -22,7 +24,23 @@ Add stylesheet paths to the VS Code setting `viewlife.customStylesheets`. Paths 
 }
 ```
 
-Custom stylesheets are applied after the selected built-in profile. Saving a CSS file or changing it in VS Code refreshes the rendered document.
+The Basic style in `webview/src/style.css` is the shared foundation. Profiles only add CSS overrides and can be selected in the editor; custom stylesheets are applied after the selected profile, without modifying the foundation. The built-in profile styles are local and do not fetch styles from those websites. Saving a CSS file or changing it in VS Code refreshes the rendered document.
+
+Use the Styles menu to edit the example CSS or import a `.css` file. Hover a CSS profile to see its larger mini-paper preview. Custom CSS is previewed there too and only affects the document after selecting **Apply to paper**. The applied CSS is stored with the editor state.
+
+The shared layout can be customized through CSS variables. For example:
+
+```css
+:root {
+  --content-width: 900px;
+  --content-font-size: 17px;
+  --content-line-height: 1.7;
+  --paper-padding: 32px;
+  --paper-border: 1px solid #888;
+  --paper-border-radius: 12px;
+  --paper-shadow: none;
+}
+```
 
 ## Development
 
