@@ -61,10 +61,12 @@
 [data-syntax="thematic_break"] {
   display: block;
   position: relative;
-  height: 1lh;
   margin: 0.9em 0;
-  font-size: 0;
-  line-height: 1lh;
+  color: transparent;
+}
+
+[data-syntax="thematic_break_line_ending"] {
+  display: none;
 }
 
 [data-syntax="thematic_break"]::after {
@@ -74,10 +76,11 @@
   left: 0;
   border-top: 1px solid var(--border);
   content: "";
+  pointer-events: none;
 }
 
 [data-active][data-syntax="thematic_break"] {
-  font-size: inherit;
+  color: inherit;
 }
 
 [data-active][data-syntax="thematic_break"]::after {
