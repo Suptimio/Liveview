@@ -2,8 +2,13 @@ import * as assert from "assert";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { normalizeLineEndings } from "../extension";
 
 suite("Viewlife Extension Test Suite", () => {
+  test("normalizes document line endings for webview synchronization", () => {
+    assert.strictEqual(normalizeLineEndings("first\r\nsecond\rthird\n"), "first\nsecond\nthird\n");
+  });
+
   test("registers the Markdown custom editor as the default", async () => {
     const extension = vscode.extensions.all.find(
       (candidate) => candidate.packageJSON.name === "viewlife",

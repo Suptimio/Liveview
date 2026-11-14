@@ -65,8 +65,8 @@
   color: transparent;
 }
 
-[data-syntax="thematic_break_line_ending"] {
-  display: none;
+#editor [data-caret-block] {
+  display: block;
 }
 
 [data-syntax="thematic_break"]::after {

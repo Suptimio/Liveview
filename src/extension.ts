@@ -17,6 +17,10 @@ type EditorState = {
   editQueue: Promise<void>;
 };
 
+export function normalizeLineEndings(text: string): string {
+  return text.replace(/\r\n?/g, "\n");
+}
+
 class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   private readonly editors = new Set<EditorState>();
   private readonly reportedStylesheetErrors = new Set<string>();
@@ -104,7 +108,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     if (state.document.isClosed) {
       return;
     }
-    if (state.document.getText() !== message.previousText) {
+    if (normalizeLineEndings(state.document.getText()) !== normalizeLineEndings(message.previousText)) {
       await this.sendDocument(state);
       return;
     }
@@ -113,7 +117,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     edit.replace(
       state.document.uri,
       new vscode.Range(state.document.positionAt(0), state.document.positionAt(state.document.getText().length)),
-      message.text,
+      normalizeLineEndings(message.text),
     );
     const applied = await vscode.workspace.applyEdit(edit);
     if (!applied) {
@@ -128,7 +132,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     }
     await state.panel.webview.postMessage({
       type: "document",
-      text: state.document.getText(),
+      text: normalizeLineEndings(state.document.getText()),
       baseUri: state.documentBaseUri,
       version: state.document.version,
     });

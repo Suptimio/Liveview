@@ -1,5 +1,10 @@
+function caretPlaceholder(node: Node): HTMLElement | null {
+  const element = node instanceof Element ? node : node.parentElement;
+  return element?.closest<HTMLElement>("[data-caret-placeholder]") ?? null;
+}
+
 function isCaretPlaceholder(node: Node) {
-  return Boolean(node.parentElement?.closest("[data-caret-placeholder]"));
+  return Boolean(caretPlaceholder(node));
 }
 
 export function readEditorText(editor: HTMLElement) {
@@ -21,6 +26,8 @@ export function readSelection(editor: HTMLElement) {
   )
     return null;
   function offset(node: Node, offset: number) {
+    const placeholderOffset = caretPlaceholder(node)?.dataset.caretOffset;
+    if (placeholderOffset !== undefined) return Number(placeholderOffset);
     const range = document.createRange();
     range.selectNodeContents(editor);
     range.setEnd(node, offset);
@@ -44,6 +51,11 @@ export function restoreSelection(editor: HTMLElement, saved: { anchor: number; f
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (node instanceof Text && node.textContent) nodes.push(node);
     }
+    const positionedPlaceholder = nodes.find((node) => {
+      const placeholder = node.parentElement?.closest<HTMLElement>("[data-caret-placeholder]");
+      return placeholder?.dataset.caretOffset === String(offset);
+    });
+    if (positionedPlaceholder) return [positionedPlaceholder, positionedPlaceholder.length];
     const placeholder = nodes.find(isCaretPlaceholder);
     const sourceNodes = nodes.filter((node) => !isCaretPlaceholder(node));
     const sourceLength = sourceNodes.reduce((total, node) => total + node.length, 0);
@@ -53,6 +65,9 @@ export function restoreSelection(editor: HTMLElement, saved: { anchor: number; f
       if (offset < length) return [node, offset];
       if (offset === length) {
         const next = sourceNodes[index + 1] ?? placeholder;
+        if (next?.textContent?.startsWith("\n") || next?.textContent?.startsWith("\r\n")) {
+          return [node, length];
+        }
         return next ? [next, 0] : [node, length];
       }
       offset -= length;

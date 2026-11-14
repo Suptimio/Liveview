@@ -48,11 +48,6 @@ const exampleCss = `:root {
   letter-spacing: -0.035em;
 }
 
-#editor [data-syntax="block_quote"] {
-  border-left: 4px solid var(--accent);
-  padding-left: 1em;
-}
-
 #editor [data-syntax="code_span"] {
   padding: 0.15em 0.4em;
 }`;
@@ -75,6 +70,8 @@ const previewBaseCss = `
   --paper-shadow: none;
 }
 * { box-sizing: border-box; }
+html, body { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
 body {
   margin: 0;
   padding: 14px;
@@ -145,10 +142,18 @@ function element(id: string): HTMLElement {
   return node;
 }
 
+function queryElement<T extends HTMLElement>(selector: string): T {
+  const node = document.querySelector<T>(selector);
+  if (!node) throw new Error(`Missing ${selector}.`);
+  return node;
+}
+
 const editor = element("editor");
 const lightButton = element("theme-light");
 const darkButton = element("theme-dark");
 const profileButtons = document.querySelectorAll<HTMLButtonElement>(".profile-button");
+const profileActions = queryElement<HTMLElement>(".profile-actions");
+const cssPreviewContainer = queryElement<HTMLElement>(".css-preview-container");
 const styleMenuToggle = element("style-menu-toggle");
 const styleMenuPanel = element("style-menu-panel");
 const customCssEditor = element("custom-css-editor") as HTMLTextAreaElement;
@@ -158,6 +163,8 @@ const loadExampleButton = element("load-css-example");
 const applyCssButton = element("apply-custom-css");
 const cssStatus = element("custom-css-status");
 const cssPreview = element("custom-css-preview") as HTMLIFrameElement;
+let previewOpenTimer: number | undefined;
+let previewCloseTimer: number | undefined;
 const toolbarElement = document.querySelector<HTMLElement>(".toolbar");
 if (!toolbarElement) throw new Error("Missing .toolbar.");
 const toolbar: HTMLElement = toolbarElement;
@@ -216,6 +223,13 @@ function updateCssDraft(status: string): void {
 }
 
 function setStyleMenuOpen(open: boolean): void {
+  if (!open) {
+    if (previewOpenTimer !== undefined) window.clearTimeout(previewOpenTimer);
+    if (previewCloseTimer !== undefined) window.clearTimeout(previewCloseTimer);
+    previewOpenTimer = undefined;
+    previewCloseTimer = undefined;
+    styleMenuPanel.classList.remove("is-preview-open");
+  }
   styleMenuPanel.hidden = !open;
   styleMenuToggle.setAttribute("aria-expanded", String(open));
 }
@@ -290,21 +304,69 @@ function updateProfileButtons(profile: RenderProfile): void {
 }
 updateProfileButtons(activeProfile);
 
+function positionCssPreview(button: HTMLButtonElement): void {
+  const panelRect = styleMenuPanel.getBoundingClientRect();
+  const actionsRect = profileActions.getBoundingClientRect();
+  const previewWidth = Number.parseFloat(getComputedStyle(cssPreviewContainer).width);
+  const buttonLeft =
+    button.getBoundingClientRect().left -
+    panelRect.left -
+    styleMenuPanel.clientLeft +
+    styleMenuPanel.scrollLeft;
+  const maxLeft = styleMenuPanel.clientWidth - previewWidth - 12;
+
+  cssPreviewContainer.style.left = `${Math.max(12, Math.min(buttonLeft, maxLeft))}px`;
+  cssPreviewContainer.style.top = `${
+    actionsRect.bottom -
+    panelRect.top -
+    styleMenuPanel.clientTop +
+    styleMenuPanel.scrollTop +
+    8
+  }px`;
+}
+
 function showProfilePreview(profile: RenderProfile): void {
   previewProfile = profile;
   renderCssPreview(cssDraft || exampleCss, profile);
 }
 
-function restoreActiveProfilePreview(): void {
-  window.requestAnimationFrame(() => {
+function openProfilePreview(button: HTMLButtonElement, profile: RenderProfile): void {
+  if (previewCloseTimer !== undefined) window.clearTimeout(previewCloseTimer);
+  previewCloseTimer = undefined;
+  positionCssPreview(button);
+
+  if (styleMenuPanel.classList.contains("is-preview-open")) {
+    showProfilePreview(profile);
+    return;
+  }
+
+  if (previewOpenTimer !== undefined) window.clearTimeout(previewOpenTimer);
+  previewOpenTimer = window.setTimeout(() => {
+    previewOpenTimer = undefined;
+    styleMenuPanel.classList.add("is-preview-open");
+    window.requestAnimationFrame(() => {
+      if (!styleMenuPanel.hidden && styleMenuPanel.classList.contains("is-preview-open")) {
+        cssPreviewContainer.getBoundingClientRect();
+        showProfilePreview(profile);
+      }
+    });
+  }, 100);
+}
+
+function closeProfilePreviewLater(): void {
+  if (previewCloseTimer !== undefined) window.clearTimeout(previewCloseTimer);
+
+  previewCloseTimer = window.setTimeout(() => {
+    previewCloseTimer = undefined;
     if (
       document.querySelector(
         ".profile-button:hover, .profile-button:focus-visible, .css-preview-container:hover, .css-preview-container:focus-within",
       )
     )
       return;
+    styleMenuPanel.classList.remove("is-preview-open");
     showProfilePreview(activeProfile);
-  });
+  }, 250);
 }
 
 for (const button of profileButtons) {
@@ -312,10 +374,10 @@ for (const button of profileButtons) {
   if (!isRenderProfile(profile)) {
     throw new Error(`Unknown render profile: ${profile}`);
   }
-  button.addEventListener("pointerenter", () => showProfilePreview(profile));
-  button.addEventListener("pointerleave", restoreActiveProfilePreview);
-  button.addEventListener("focus", () => showProfilePreview(profile));
-  button.addEventListener("blur", restoreActiveProfilePreview);
+  button.addEventListener("pointerenter", () => openProfilePreview(button, profile));
+  button.addEventListener("pointerleave", closeProfilePreviewLater);
+  button.addEventListener("focus", () => openProfilePreview(button, profile));
+  button.addEventListener("blur", closeProfilePreviewLater);
   button.addEventListener("click", () => {
     setRenderProfile(profile);
     activeProfile = profile;
@@ -325,6 +387,17 @@ for (const button of profileButtons) {
     renderCssPreview(cssDraft || exampleCss, profile);
   });
 }
+
+cssPreviewContainer.addEventListener("pointerenter", () => {
+  if (previewCloseTimer !== undefined) window.clearTimeout(previewCloseTimer);
+  previewCloseTimer = undefined;
+});
+cssPreviewContainer.addEventListener("pointerleave", closeProfilePreviewLater);
+cssPreviewContainer.addEventListener("focusin", () => {
+  if (previewCloseTimer !== undefined) window.clearTimeout(previewCloseTimer);
+  previewCloseTimer = undefined;
+});
+cssPreviewContainer.addEventListener("focusout", closeProfilePreviewLater);
 
 applyStylesheets();
 renderCssPreview(cssDraft || exampleCss);
@@ -367,18 +440,78 @@ try {
   let health: "ready" | "failed" = "ready";
   let currentSource = "";
   let documentVersion = 0;
+  let renderedActiveLine = -1;
+
+  function removeCaretPlaceholders(): void {
+    for (const placeholder of editor.querySelectorAll("[data-caret-placeholder]")) {
+      placeholder.remove();
+    }
+  }
+
+  function ensureCaretPlaceholder(source: string, offset?: number): void {
+    const position = offset ?? (source.endsWith("\n") ? source.length : undefined);
+    if (position === undefined) return;
+    const lineStart = source.lastIndexOf("\n", position - 1) + 1;
+    const lineEndIndex = source.indexOf("\n", position);
+    const lineEnd = lineEndIndex === -1 ? source.length : lineEndIndex;
+    if (source.slice(lineStart, lineEnd).trim() !== "") return;
+
+    let thematicBreak: HTMLElement | null = null;
+    if (lineStart > 0 && lineEnd < source.length) {
+      const previousLineEnd = lineStart - 1;
+      const previousLineStart = source.lastIndexOf("\n", previousLineEnd - 1) + 1;
+      const previousLine = source.slice(previousLineStart, previousLineEnd);
+      if (/^[ \t]{0,3}(?:-[ \t]*){3,}$/.test(previousLine)) {
+        thematicBreak =
+          [...editor.querySelectorAll<HTMLElement>('[data-syntax="thematic_break"]')].find(
+            (element) => {
+              const range = document.createRange();
+              range.selectNodeContents(editor);
+              range.setEndBefore(element);
+              return range.toString().length === previousLineStart;
+            },
+          ) ?? null;
+      }
+    }
+
+    const placeholder = document.createElement("span");
+    placeholder.dataset.caretPlaceholder = "";
+    placeholder.dataset.caretOffset = String(position);
+    placeholder.setAttribute("aria-hidden", "true");
+    placeholder.textContent = "\u200b";
+
+    if (thematicBreak?.parentNode) {
+      placeholder.dataset.caretBlock = "";
+      thematicBreak.parentNode.insertBefore(placeholder, thematicBreak.nextSibling);
+      return;
+    }
+
+    if (position === source.length) {
+      editor.append(placeholder);
+      return;
+    }
+
+    let remaining = position;
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!(node instanceof Text)) continue;
+      if (remaining > node.length) {
+        remaining -= node.length;
+        continue;
+      }
+      const before = remaining === node.length ? node.nextSibling : node.splitText(remaining);
+      node.parentNode?.insertBefore(placeholder, before);
+      return;
+    }
+    editor.append(placeholder);
+  }
 
   function update(source = readEditorText(editor), selection = readSelection(editor)): void {
-    patch(editor, markdown(source, selection?.focus));
+    removeCaretPlaceholders();
+    const activeOffset = document.activeElement === editor ? selection?.focus : undefined;
+    patch(editor, markdown(source, activeOffset));
     currentSource = source;
-    editor.querySelector("[data-caret-placeholder]")?.remove();
-    if (source.endsWith("\n")) {
-      const placeholder = document.createElement("span");
-      placeholder.dataset.caretPlaceholder = "";
-      placeholder.setAttribute("aria-hidden", "true");
-      placeholder.textContent = "\u200b";
-      editor.append(placeholder);
-    }
+    ensureCaretPlaceholder(source, selection?.focus);
     if (selection) {
       selection = {
         anchor: Math.min(selection.anchor, source.length),
@@ -386,6 +519,8 @@ try {
       };
       restoreSelection(editor, selection);
     }
+    renderedActiveLine =
+      activeOffset === undefined ? -1 : source.lastIndexOf("\n", activeOffset - 1) + 1;
     revealSyntax(editor);
     if (selection) restoreSelection(editor, selection);
   }
@@ -541,8 +676,17 @@ try {
       document.activeElement === editor && selection
         ? currentSource.lastIndexOf("\n", selection.focus - 1) + 1
         : -1;
+    if (activeLine === renderedActiveLine) {
+        revealSyntax(editor);
+        return;
+    }
+
+    renderedActiveLine = activeLine;
     const focus = activeLine === -1 ? undefined : selection?.focus;
+    removeCaretPlaceholders();
     patch(editor, markdown(currentSource, focus));
+    ensureCaretPlaceholder(currentSource, selection?.focus);
+    if (selection) restoreSelection(editor, selection);
     revealSyntax(editor);
     if (selection) restoreSelection(editor, selection);
   }
@@ -557,19 +701,26 @@ try {
     event.preventDefault();
     editor.focus();
     const bounds = rule.getBoundingClientRect();
+    const textRange = document.createRange();
+    textRange.selectNodeContents(text);
+    const textBounds = textRange.getBoundingClientRect();
+    const width = textBounds.width || bounds.width;
+    const left = textBounds.width ? textBounds.left : bounds.left;
     const position =
-      bounds.width === 0
+      width === 0
         ? 0
         : Math.round(
-            (Math.max(0, Math.min(event.clientX - bounds.left, bounds.width)) / bounds.width) *
+            (Math.max(0, Math.min(event.clientX - left, width)) / width) *
               text.length,
           );
     window.getSelection()?.setBaseAndExtent(text, position, text, position);
     syncActiveLine();
   });
   document.addEventListener("selectionchange", syncActiveLine);
+  editor.addEventListener("focus", syncActiveLine);
   editor.addEventListener("blur", syncActiveLine);
   editor.addEventListener("keydown", (event) => {
+    /*
     if (event.key === "Enter") {
       event.preventDefault();
       const selection = readSelection(editor);
@@ -593,6 +744,7 @@ try {
       replaceText(start, end, continuation);
       return;
     }
+    */
     if (event.key !== "Tab") return;
     const selection = readSelection(editor);
     if (!selection || selection.anchor !== selection.focus) return;
