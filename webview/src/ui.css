@@ -1,10 +1,53 @@
 :root {
+  font-family: var(--profile-font, Inter, ui-sans-serif, system-ui, sans-serif);
+  color: var(--foreground);
+  background: var(--background);
+  color-scheme: light dark;
+  font-synthesis: none;
+
+  --content-width: 1000px;
+  --content-padding-x: 28px;
+  --content-padding-top: 32px;
+  --content-padding-bottom: 80px;
+  --content-font-size: 16px;
+  --content-line-height: 1.8;
+  --paper-min-height: 70vh;
+  --paper-padding: 40px;
+  --paper-border: 1px solid #d6d6d6;
+  --paper-border-radius: 8px;
+  --paper-shadow: 0 4px 18px rgb(0 0 0 / 8%);
+  --editor-border: transparent;
+  --editor-radius: 0;
+  --editor-padding: 0;
+
   --ui-background: var(--background);
   --ui-surface: var(--surface);
   --ui-foreground: var(--foreground);
   --ui-muted: var(--muted);
   --ui-border: var(--border);
   --ui-accent: var(--accent);
+}
+
+#editor {
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  outline: none;
+  min-height: 60vh;
+  line-height: var(--content-line-height, 1.8);
+  font-size: var(--content-font-size, 16px);
+  caret-color: var(--accent);
+  border: 1px solid var(--editor-border, transparent);
+  border-radius: var(--editor-radius, 0);
+  padding: var(--editor-padding, 0);
+}
+
+#editor [data-caret-placeholder] {
+  white-space: pre;
+}
+
+#editor [data-caret-block] {
+  display: block;
 }
 
 body {
@@ -226,6 +269,10 @@ main {
 }
 
 .custom-css-actions button {
+  width: 148px;
+}
+
+#export-css-template {
   width: 148px;
 }
 

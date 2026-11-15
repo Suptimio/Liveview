@@ -6,8 +6,25 @@ import { setTheme } from "./theme";
 import githubProfileCss from "./profiles/github.css?inline";
 import gitlabProfileCss from "./profiles/gitlab.css?inline";
 import vscodeProfileCss from "./profiles/vscode.css?inline";
-import "./style.css";
+import baseStyleSource from "./style.css?raw";
+import syntaxStyleSource from "./syntax.css?raw";
+import githubProfileSource from "./profiles/github.css?raw";
+import gitlabProfileSource from "./profiles/gitlab.css?raw";
+import vscodeProfileSource from "./profiles/vscode.css?raw";
 import "./ui.css";
+
+const basicCss = [
+  "/* Markdown syntax */",
+  syntaxStyleSource,
+  "/* GitHub profile */",
+  githubProfileSource,
+  "/* GitLab profile */",
+  gitlabProfileSource,
+  "/* VS Code profile */",
+  vscodeProfileSource,
+  "/* Base style.css */",
+  baseStyleSource.replace(/^@import\s+["'][^"']+["'];\r?\n/gm, ""),
+].join("\n\n");
 
 const profileCss: Record<RenderProfile, string> = {
   basic: "",
@@ -24,8 +41,9 @@ type EditMessage = { type: "edit"; previousText: string; text: string };
 type ExtensionMessage = EditMessage | { type: "ready" } | { type: "error"; message: string };
 type WebviewState = {
   profile?: RenderProfile;
-  customCss?: string;
   cssDraft?: string;
+  appliedCss?: string;
+  customCssActive?: boolean;
 };
 
 declare function acquireVsCodeApi(): {
@@ -34,7 +52,7 @@ declare function acquireVsCodeApi(): {
   setState(state: WebviewState): void;
 };
 
-const exampleCss = `:root {
+const previousExampleCss = `:root {
   --content-width: 860px;
   --content-font-size: 16px;
   --content-line-height: 1.65;
@@ -168,25 +186,32 @@ let previewCloseTimer: number | undefined;
 const toolbarElement = document.querySelector<HTMLElement>(".toolbar");
 if (!toolbarElement) throw new Error("Missing .toolbar.");
 const toolbar: HTMLElement = toolbarElement;
-const customStyles = document.createElement("style");
-document.head.append(customStyles);
 const savedState = vscode.getState();
 let activeProfile: RenderProfile = isRenderProfile(savedState?.profile) ? savedState.profile : "basic";
-let activeCustomCss = typeof savedState?.customCss === "string" ? savedState.customCss : "";
+let customCssActive =
+  savedState?.customCssActive === true && typeof savedState.appliedCss === "string";
+let activePaperCss =
+  customCssActive && typeof savedState?.appliedCss === "string" ? savedState.appliedCss : basicCss;
+const savedCssDraft = typeof savedState?.cssDraft === "string" ? savedState.cssDraft : undefined;
 let cssDraft =
-  typeof savedState?.cssDraft === "string"
-    ? savedState.cssDraft
-    : activeCustomCss || exampleCss;
+  savedCssDraft !== undefined && !(savedCssDraft === previousExampleCss && !customCssActive)
+    ? savedCssDraft
+    : activePaperCss;
 let previewProfile = activeProfile;
 let externalStylesheets: { name: string; text: string }[] = [];
 
+const paperStyles = document.createElement("style");
+paperStyles.textContent = activePaperCss;
+const customStyles = document.createElement("style");
+document.head.append(paperStyles, customStyles);
 customCssEditor.value = cssDraft;
 
 function persistStyleState(): void {
   vscode.setState({
     profile: activeProfile,
-    customCss: activeCustomCss,
     cssDraft,
+    appliedCss: activePaperCss,
+    customCssActive,
   });
 }
 
@@ -212,13 +237,24 @@ function applyStylesheets(): void {
         `/* ${stylesheet.name.replaceAll("*/", "* /")} */\n${stylesheet.text}`,
     )
     .join("\n");
-  customStyles.textContent = [configuredCss, activeCustomCss].filter(Boolean).join("\n");
+  customStyles.textContent = configuredCss;
+}
+
+function updateCustomCssButton(): void {
+  const hasUnappliedChanges = customCssActive && customCssEditor.value !== activePaperCss;
+  applyCssButton.textContent = customCssActive
+    ? hasUnappliedChanges
+      ? "Apply changes"
+      : "Restore preset"
+    : "Apply to paper";
+  applyCssButton.setAttribute("aria-pressed", String(customCssActive));
 }
 
 function updateCssDraft(status: string): void {
   cssDraft = customCssEditor.value;
   persistStyleState();
-  renderCssPreview(cssDraft || exampleCss);
+  renderCssPreview(cssDraft);
+  updateCustomCssButton();
   cssStatus.textContent = status;
 }
 
@@ -283,7 +319,7 @@ function updateThemeButtons(): void {
   const isDark = document.documentElement.dataset.theme === "dark";
   lightButton.setAttribute("aria-pressed", String(!isDark));
   darkButton.setAttribute("aria-pressed", String(isDark));
-  renderCssPreview(cssDraft || exampleCss);
+  renderCssPreview(cssDraft);
 }
 
 lightButton.addEventListener("click", () => {
@@ -299,8 +335,12 @@ updateThemeButtons();
 setRenderProfile(activeProfile);
 function updateProfileButtons(profile: RenderProfile): void {
   for (const button of profileButtons) {
-    button.setAttribute("aria-pressed", String(button.dataset.profile === profile));
+    button.setAttribute(
+      "aria-pressed",
+      String(!customCssActive && button.dataset.profile === profile),
+    );
   }
+  updateCustomCssButton();
 }
 updateProfileButtons(activeProfile);
 
@@ -327,7 +367,7 @@ function positionCssPreview(button: HTMLButtonElement): void {
 
 function showProfilePreview(profile: RenderProfile): void {
   previewProfile = profile;
-  renderCssPreview(cssDraft || exampleCss, profile);
+  renderCssPreview(cssDraft, profile);
 }
 
 function openProfilePreview(button: HTMLButtonElement, profile: RenderProfile): void {
@@ -381,10 +421,15 @@ for (const button of profileButtons) {
   button.addEventListener("click", () => {
     setRenderProfile(profile);
     activeProfile = profile;
+    customCssActive = false;
+    activePaperCss = basicCss;
+    paperStyles.textContent = activePaperCss;
     previewProfile = profile;
+    applyStylesheets();
     persistStyleState();
     updateProfileButtons(profile);
-    renderCssPreview(cssDraft || exampleCss, profile);
+    renderCssPreview(cssDraft, profile);
+    cssStatus.textContent = "Built-in profile selected. Custom CSS is inactive.";
   });
 }
 
@@ -400,7 +445,7 @@ cssPreviewContainer.addEventListener("focusin", () => {
 cssPreviewContainer.addEventListener("focusout", closeProfilePreviewLater);
 
 applyStylesheets();
-renderCssPreview(cssDraft || exampleCss);
+renderCssPreview(cssDraft);
 customCssEditor.addEventListener("input", () => {
   updateCssDraft("Preview updated. Apply the CSS to change the paper.");
 });
@@ -423,16 +468,27 @@ customCssFile.addEventListener("change", () => {
     });
 });
 loadExampleButton.addEventListener("click", () => {
-  customCssEditor.value = exampleCss;
-  updateCssDraft("Example loaded. Apply it to change the paper.");
+  customCssEditor.value = basicCss;
+  updateCssDraft("Basic CSS loaded. Apply it to the paper or edit it first.");
 });
 applyCssButton.addEventListener("click", () => {
-  activeCustomCss = cssDraft;
+  cssDraft = customCssEditor.value;
+  if (customCssActive && cssDraft === activePaperCss) {
+    customCssActive = false;
+    activePaperCss = basicCss;
+    cssStatus.textContent = "Built-in CSS preset restored.";
+  } else {
+    customCssActive = true;
+    activePaperCss = cssDraft;
+    cssStatus.textContent = activePaperCss.trim()
+      ? "Custom CSS applied temporarily."
+      : "Empty custom CSS applied temporarily.";
+  }
+  paperStyles.textContent = activePaperCss;
   applyStylesheets();
   persistStyleState();
-  cssStatus.textContent = activeCustomCss
-    ? "Custom CSS applied to the paper."
-    : "Custom CSS cleared from the paper.";
+  renderCssPreview(cssDraft);
+  updateProfileButtons(activeProfile);
 });
 
 try {

@@ -1,0 +1,35 @@
+/* Paper container */
+.paper {}
+
+/* Headings */
+.paper [data-syntax="atx_heading"][data-level="1"] {}
+.paper [data-syntax="atx_heading"][data-level="2"] {}
+.paper [data-syntax="atx_heading"][data-level="3"] {}
+.paper [data-syntax="atx_heading"][data-level="4"] {}
+.paper [data-syntax="atx_heading"][data-level="5"] {}
+.paper [data-syntax="atx_heading"][data-level="6"] {}
+
+/* Paragraphs and quotes */
+.paper [data-syntax="paragraph"] {}
+.paper [data-syntax="block_quote"] {}
+
+/* Inline text */
+.paper [data-syntax="strong_emphasis"] {}
+.paper [data-syntax="emphasis"] {}
+.paper [data-syntax="strikethrough"] {}
+.paper [data-syntax="inline_link"] {}
+
+/* Code */
+.paper [data-syntax="code_span"] {}
+.paper [data-syntax="fenced_code_block"] {}
+
+/* Lists */
+.paper [data-syntax="list"] {}
+.paper [data-syntax="list_item"] {}
+
+/* Thematic breaks */
+.paper [data-syntax="thematic_break"] {}
+
+/* Images and tables */
+.paper [data-preview="image"] {}
+.paper [data-preview="table"] {}
