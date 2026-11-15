@@ -52,24 +52,6 @@ declare function acquireVsCodeApi(): {
   setState(state: WebviewState): void;
 };
 
-const previousExampleCss = `:root {
-  --content-width: 860px;
-  --content-font-size: 16px;
-  --content-line-height: 1.65;
-  --paper-padding: 32px;
-  --paper-border: 1px solid #d0d7de;
-  --paper-border-radius: 14px;
-  --paper-shadow: 0 12px 30px rgb(31 35 40 / 12%);
-}
-
-#editor [data-syntax="atx_heading"][data-level="1"] {
-  letter-spacing: -0.035em;
-}
-
-#editor [data-syntax="code_span"] {
-  padding: 0.15em 0.4em;
-}`;
-
 const previewBaseCss = `
 :root {
   --background: #ffffff;
@@ -193,10 +175,7 @@ let customCssActive =
 let activePaperCss =
   customCssActive && typeof savedState?.appliedCss === "string" ? savedState.appliedCss : basicCss;
 const savedCssDraft = typeof savedState?.cssDraft === "string" ? savedState.cssDraft : undefined;
-let cssDraft =
-  savedCssDraft !== undefined && !(savedCssDraft === previousExampleCss && !customCssActive)
-    ? savedCssDraft
-    : activePaperCss;
+let cssDraft = savedCssDraft ?? activePaperCss;
 let previewProfile = activeProfile;
 let externalStylesheets: { name: string; text: string }[] = [];
 
@@ -356,13 +335,12 @@ function positionCssPreview(button: HTMLButtonElement): void {
   const maxLeft = styleMenuPanel.clientWidth - previewWidth - 12;
 
   cssPreviewContainer.style.left = `${Math.max(12, Math.min(buttonLeft, maxLeft))}px`;
-  cssPreviewContainer.style.top = `${
-    actionsRect.bottom -
+  cssPreviewContainer.style.top = `${actionsRect.bottom -
     panelRect.top -
     styleMenuPanel.clientTop +
     styleMenuPanel.scrollTop +
     8
-  }px`;
+    }px`;
 }
 
 function showProfilePreview(profile: RenderProfile): void {
@@ -733,8 +711,8 @@ try {
         ? currentSource.lastIndexOf("\n", selection.focus - 1) + 1
         : -1;
     if (activeLine === renderedActiveLine) {
-        revealSyntax(editor);
-        return;
+      revealSyntax(editor);
+      return;
     }
 
     renderedActiveLine = activeLine;
@@ -766,9 +744,9 @@ try {
       width === 0
         ? 0
         : Math.round(
-            (Math.max(0, Math.min(event.clientX - left, width)) / width) *
-              text.length,
-          );
+          (Math.max(0, Math.min(event.clientX - left, width)) / width) *
+          text.length,
+        );
     window.getSelection()?.setBaseAndExtent(text, position, text, position);
     syncActiveLine();
   });
