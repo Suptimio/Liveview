@@ -353,6 +353,7 @@ export async function createMarkdown() {
         node.type.endsWith("_delimiter") ||
         node.type.endsWith("_marker") ||
         node.type.startsWith("list_marker_") ||
+        node.type === "block_continuation" ||
         node.type === "info_string" ||
         (parentType === "inline_link" && node.type !== "link_text");
       const activeLineStart =

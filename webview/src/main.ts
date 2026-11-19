@@ -616,6 +616,63 @@ try {
     replaceText(start, end, text);
   }
 
+  function insertParagraph(): void {
+    const selection = readSelection(editor);
+    if (!selection) {
+      insertText("\n");
+      return;
+    }
+
+    const start = Math.min(selection.anchor, selection.focus);
+    const end = Math.max(selection.anchor, selection.focus);
+    const lineStart = currentSource.lastIndexOf("\n", start - 1) + 1;
+    const nextLineBreak = currentSource.indexOf("\n", start);
+    const lineEnd = nextLineBreak === -1 ? currentSource.length : nextLineBreak;
+    const line = currentSource.slice(lineStart, lineEnd);
+    const quotePrefix = line.match(/^[ \t]{0,3}(?:>[ \t]?)+/)?.[0];
+    if (!quotePrefix) {
+      insertText("\n");
+      return;
+    }
+
+    if (start === end && !line.slice(quotePrefix.length).trim()) {
+      const replaceEnd = lineEnd < currentSource.length ? lineEnd + 1 : lineEnd;
+      replaceText(lineStart, replaceEnd, "\n", lineStart + 1);
+      return;
+    }
+
+    insertText(`\n${quotePrefix}`);
+  }
+
+  function materializeLazyBlockQuote(): void {
+    const selection = readSelection(editor);
+    const focusNode = window.getSelection()?.focusNode;
+    if (!selection || selection.anchor !== selection.focus || !focusNode) return;
+
+    let element = focusNode instanceof Element ? focusNode : focusNode.parentElement;
+    let quoteDepth = 0;
+    while (element && element !== editor) {
+      if (element.getAttribute("data-syntax") === "block_quote") quoteDepth++;
+      element = element.parentElement;
+    }
+    if (!quoteDepth) return;
+
+    const lineStart = currentSource.lastIndexOf("\n", selection.focus - 1) + 1;
+    const nextLineBreak = currentSource.indexOf("\n", selection.focus);
+    const lineEnd = nextLineBreak === -1 ? currentSource.length : nextLineBreak;
+    const line = currentSource.slice(lineStart, lineEnd);
+    const indentation = line.match(/^[ \t]{0,3}/)?.[0] ?? "";
+    if (line.slice(indentation.length).startsWith(">")) return;
+
+    const marker = "> ".repeat(quoteDepth);
+    const insertAt = lineStart + indentation.length;
+    const moveOffset = (offset: number) => (offset >= insertAt ? offset + marker.length : offset);
+    localChange(
+      `${currentSource.slice(0, insertAt)}${marker}${currentSource.slice(insertAt)}`,
+      { anchor: moveOffset(selection.anchor), focus: moveOffset(selection.focus) },
+    );
+  }
+
   update("");
   editor.contentEditable = "true";
   editor.setAttribute("aria-readonly", "false");
@@ -674,7 +731,7 @@ try {
       insertText(event.data ?? "");
     } else if (event.inputType === "insertParagraph" || event.inputType === "insertLineBreak") {
       event.preventDefault();
-      insertText("\n");
+      insertParagraph();
     } else if (event.inputType.startsWith("delete")) {
       const range = event.getTargetRanges()[0];
       if (range) {
@@ -697,6 +754,7 @@ try {
     event.preventDefault();
     insertText(event.clipboardData?.getData("text/plain").replaceAll("\r\n", "\n") ?? "");
   });
+  editor.addEventListener("pointerup", materializeLazyBlockQuote);
   editor.addEventListener("drop", (event) => event.preventDefault());
   editor.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {

@@ -54,6 +54,10 @@
 }
 
 [data-syntax="block_quote"] {
+  display: block;
+  margin: 0.6em 0;
+  padding-left: 1em;
+  border-left: 3px solid var(--border);
   color: var(--muted);
   font-style: italic;
 }
