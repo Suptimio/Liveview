@@ -1,15 +1,211 @@
 :root[data-profile="gitlab"] {
-  --profile-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --profile-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+
   --content-width: 1040px;
-  --content-line-height: 1.65;
+  --content-padding-x: 32px;
+  --content-padding-top: 32px;
+  --content-padding-bottom: 64px;
+  --content-font-size: 16px;
+  --content-line-height: 1.6;
+
+  --paper-padding: 32px;
+  --paper-border: 0;
+  --paper-border-radius: 0;
+  --paper-shadow: none;
+  --editor-border: transparent;
+  --editor-radius: 0;
+  --editor-padding: 0;
 }
 
-:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"] {
-  border-bottom: 1px solid var(--border);
+:root[data-profile="gitlab"] .paper[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #333238;
+  --heading: #333238;
+  --muted: #737278;
+  --surface: #f0f0f0;
+  --border: #dcdcde;
+  --accent: #1f75cb;
+  --code: #333238;
+  --marker: #737278;
+}
+
+:root[data-profile="gitlab"] .paper[data-theme="dark"] {
+  --background: #1f1f23;
+  --foreground: #e3e3e3;
+  --heading: #ffffff;
+  --muted: #a4a3a8;
+  --surface: #2b2a2f;
+  --border: #525159;
+  --accent: #63a6e9;
+  --code: #e3e3e3;
+  --marker: #a4a3a8;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"],
+:root[data-profile="gitlab"] #editor [data-syntax="setext_heading"] {
+  display: block;
+  margin: 24px 0 16px;
   padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border);
+  color: var(--heading);
+  font-weight: 600;
+  line-height: 1.3;
 }
 
-:root[data-profile="gitlab"] #editor [data-syntax="block_quote"] {
-  border-left: 4px solid var(--accent);
-  padding-left: 1em;
+:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"][data-level="1"],
+:root[data-profile="gitlab"] #editor h1 {
+  margin-top: 0;
+  font-size: 2em;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"][data-level="2"],
+:root[data-profile="gitlab"] #editor h2 {
+  font-size: 1.6em;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"][data-level="3"],
+:root[data-profile="gitlab"] #editor h3 {
+  font-size: 1.3em;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"][data-level="4"],
+:root[data-profile="gitlab"] #editor h4 {
+  font-size: 1.1em;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"][data-level="5"],
+:root[data-profile="gitlab"] #editor h5 {
+  font-size: 1em;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="atx_heading"][data-level="6"],
+:root[data-profile="gitlab"] #editor h6 {
+  font-size: 0.9em;
+  color: var(--muted);
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="paragraph"],
+:root[data-profile="gitlab"] #editor p {
+  display: block;
+  margin: 0 0 16px;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="strong_emphasis"],
+:root[data-profile="gitlab"] #editor strong {
+  font-weight: 600;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="emphasis"],
+:root[data-profile="gitlab"] #editor em {
+  font-style: italic;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="strikethrough"],
+:root[data-profile="gitlab"] #editor del {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="inline_link"],
+:root[data-profile="gitlab"] #editor a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="block_quote"],
+:root[data-profile="gitlab"] #editor blockquote {
+  display: block;
+  margin: 0 0 16px;
+  padding: 0 1em;
+  border-left: 4px solid var(--border);
+  color: var(--muted);
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="code_span"],
+:root[data-profile="gitlab"] #editor code {
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--code);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="fenced_code_block"],
+:root[data-profile="gitlab"] #editor pre {
+  display: block;
+  margin: 0 0 16px;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--foreground);
+  font: 0.9em/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="list"],
+:root[data-profile="gitlab"] #editor ul,
+:root[data-profile="gitlab"] #editor ol {
+  display: block;
+  margin: 0 0 16px;
+  padding-left: 2em;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="list_item"],
+:root[data-profile="gitlab"] #editor li {
+  display: block;
+  margin: 0.3em 0;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="list_item"] > [data-syntax="paragraph"] {
+  display: inline;
+  margin: 0;
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="list_item"]::before {
+  color: var(--muted);
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="thematic_break"],
+:root[data-profile="gitlab"] #editor hr {
+  display: block;
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+:root[data-profile="gitlab"] #editor [data-syntax="thematic_break"]::after {
+  display: none;
+}
+
+:root[data-profile="gitlab"] #editor [data-active][data-syntax="thematic_break"] {
+  height: auto;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+:root[data-profile="gitlab"] #editor [data-preview="image"],
+:root[data-profile="gitlab"] #editor [data-preview="table"],
+:root[data-profile="gitlab"] #editor [data-syntax="html_block"] {
+  display: block;
+  margin: 0 0 16px;
+}
+
+:root[data-profile="gitlab"] #editor table {
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+:root[data-profile="gitlab"] #editor th,
+:root[data-profile="gitlab"] #editor td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+}
+
+:root[data-profile="gitlab"] #editor th {
+  font-weight: 600;
+  background: var(--surface);
 }

@@ -1,6 +1,5 @@
 :root[data-profile="github"] {
-  --profile-font: -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Helvetica, Arial, sans-serif;
+  --profile-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 
   --content-width: 1012px;
   --content-padding-x: 32px;
@@ -9,26 +8,212 @@
   --content-font-size: 16px;
   --content-line-height: 1.5;
 
+  --paper-padding: 32px;
+  --paper-border: 0;
+  --paper-border-radius: 0;
+  --paper-shadow: none;
   --editor-border: transparent;
   --editor-radius: 0;
   --editor-padding: 0;
 }
 
-:root[data-profile="github"] #editor [data-syntax="atx_heading"] {
+:root[data-profile="github"] .paper[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #1f2328;
+  --heading: #1f2328;
+  --muted: #59636e;
+  --surface: #f6f8fa;
+  --border: #d1d9e0;
+  --accent: #0969da;
+  --code: #1f2328;
+  --marker: #656d76;
+}
+
+:root[data-profile="github"] .paper[data-theme="dark"] {
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --heading: #e6edf3;
+  --muted: #9198a1;
+  --surface: #161b22;
+  --border: #30363d;
+  --accent: #4493f8;
+  --code: #e6edf3;
+  --marker: #9198a1;
+}
+
+:root[data-profile="github"] #editor [data-syntax="atx_heading"],
+:root[data-profile="github"] #editor [data-syntax="setext_heading"] {
+  display: block;
+  margin: 24px 0 16px;
+  color: var(--heading);
+  font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.02em;
 }
 
-:root[data-profile="github"] #editor [data-syntax="strong_emphasis"] {
+:root[data-profile="github"] #editor [data-syntax="atx_heading"][data-level="1"],
+:root[data-profile="github"] #editor h1 {
+  margin-top: 0;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+  font-size: 2em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="atx_heading"][data-level="2"],
+:root[data-profile="github"] #editor h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.5em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="atx_heading"][data-level="3"],
+:root[data-profile="github"] #editor h3 {
+  font-size: 1.25em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="atx_heading"][data-level="4"],
+:root[data-profile="github"] #editor h4 {
+  font-size: 1em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="atx_heading"][data-level="5"],
+:root[data-profile="github"] #editor h5 {
+  font-size: 0.875em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="atx_heading"][data-level="6"],
+:root[data-profile="github"] #editor h6 {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+:root[data-profile="github"] #editor [data-syntax="paragraph"],
+:root[data-profile="github"] #editor p {
+  display: block;
+  margin: 0 0 16px;
+}
+
+:root[data-profile="github"] #editor [data-syntax="strong_emphasis"],
+:root[data-profile="github"] #editor strong {
   font-weight: 600;
 }
 
-:root[data-profile="github"] #editor [data-syntax="block_quote"] {
-  border-left: 3px solid var(--border);
-  padding-left: 1em;
+:root[data-profile="github"] #editor [data-syntax="emphasis"],
+:root[data-profile="github"] #editor em {
+  font-style: italic;
+}
+
+:root[data-profile="github"] #editor [data-syntax="strikethrough"],
+:root[data-profile="github"] #editor del {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+:root[data-profile="github"] #editor [data-syntax="inline_link"],
+:root[data-profile="github"] #editor a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+:root[data-profile="github"] #editor [data-syntax="inline_link"]:hover,
+:root[data-profile="github"] #editor a:hover {
+  text-decoration: underline;
+}
+
+:root[data-profile="github"] #editor [data-syntax="block_quote"],
+:root[data-profile="github"] #editor blockquote {
+  display: block;
+  margin: 0 0 16px;
+  padding: 0 1em;
+  border-left: 0.25em solid var(--border);
+  color: var(--muted);
 }
 
 :root[data-profile="github"] #editor [data-syntax="code_span"],
-:root[data-profile="github"] #editor [data-syntax="fenced_code_block"] {
+:root[data-profile="github"] #editor code {
+  padding: 0.2em 0.4em;
   border-radius: 6px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="fenced_code_block"],
+:root[data-profile="github"] #editor pre {
+  display: block;
+  margin: 0 0 16px;
+  padding: 16px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--foreground);
+  font: 0.85em/1.45 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root[data-profile="github"] #editor [data-syntax="list"],
+:root[data-profile="github"] #editor ul,
+:root[data-profile="github"] #editor ol {
+  display: block;
+  margin: 0 0 16px;
+  padding-left: 2em;
+}
+
+:root[data-profile="github"] #editor [data-syntax="list_item"],
+:root[data-profile="github"] #editor li {
+  display: block;
+  margin: 0.25em 0;
+}
+
+:root[data-profile="github"] #editor [data-syntax="list_item"] > [data-syntax="paragraph"] {
+  display: inline;
+  margin: 0;
+}
+
+:root[data-profile="github"] #editor [data-syntax="list_item"]::before {
+  color: var(--foreground);
+}
+
+:root[data-profile="github"] #editor [data-syntax="thematic_break"],
+:root[data-profile="github"] #editor hr {
+  display: block;
+  height: 0.25em;
+  margin: 24px 0;
+  padding: 0;
+  border: 0;
+  background: var(--border);
+}
+
+:root[data-profile="github"] #editor [data-syntax="thematic_break"]::after {
+  display: none;
+}
+
+:root[data-profile="github"] #editor [data-active][data-syntax="thematic_break"] {
+  height: auto;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+:root[data-profile="github"] #editor [data-preview="image"],
+:root[data-profile="github"] #editor [data-preview="table"],
+:root[data-profile="github"] #editor [data-syntax="html_block"] {
+  display: block;
+  margin: 0 0 16px;
+}
+
+:root[data-profile="github"] #editor table {
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+:root[data-profile="github"] #editor th,
+:root[data-profile="github"] #editor td {
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+}
+
+:root[data-profile="github"] #editor th {
+  font-weight: 600;
+  background: var(--surface);
 }
