@@ -1,5 +1,7 @@
 # Viewlife
 
+---
+
 Viewlife opens `.md` and `.markdown` files directly as a live WYSIWYG editor in VS Code. Markdown edits are written back to the file, so normal VS Code saving, undo, and file-change handling continue to work.
 
 ## Features
