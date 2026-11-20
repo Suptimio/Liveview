@@ -2,6 +2,7 @@ import { createMarkdown } from "./markdown";
 import { readEditorText, readSelection, restoreSelection, revealSyntax } from "./selection";
 import { patch } from "./vdom";
 import { isRenderProfile, setRenderProfile, type RenderProfile } from "./profiles";
+import { setupExporter } from "./exporter";
 import { setTheme } from "./theme";
 import githubProfileCss from "./profiles/github.css?inline";
 import gitlabProfileCss from "./profiles/gitlab.css?inline";
@@ -38,7 +39,12 @@ type HostMessage =
   | { type: "stylesheets"; stylesheets: { name: string; text: string }[] };
 
 type EditMessage = { type: "edit"; previousText: string; text: string };
-type ExtensionMessage = EditMessage | { type: "ready" } | { type: "error"; message: string };
+type ExtensionMessage =
+  | EditMessage
+  | { type: "ready" }
+  | { type: "error"; message: string }
+  | { type: "export"; pdf: string }
+  | { type: "export-error"; message: string };
 type WebviewState = {
   profile?: RenderProfile;
   cssDraft?: string;
@@ -168,6 +174,14 @@ let previewCloseTimer: number | undefined;
 const toolbarElement = document.querySelector<HTMLElement>(".toolbar");
 if (!toolbarElement) throw new Error("Missing .toolbar.");
 const toolbar: HTMLElement = toolbarElement;
+const paper = element("paper");
+const exportButton = element("export-pdf") as HTMLButtonElement;
+setupExporter(
+  exportButton,
+  paper,
+  (pdf) => vscode.postMessage({ type: "export", pdf }),
+  (message) => vscode.postMessage({ type: "export-error", message }),
+);
 const savedState = vscode.getState();
 let activeProfile: RenderProfile = isRenderProfile(savedState?.profile) ? savedState.profile : "basic";
 let customCssActive =

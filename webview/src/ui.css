@@ -133,6 +133,12 @@ main {
   white-space: nowrap;
 }
 
+#export-pdf {
+  flex: 0 0 88px;
+  width: 88px;
+  cursor: pointer;
+}
+
 .toolbar-actions>button:hover,
 .toolbar .style-menu-toggle:hover,
 .style-menu-panel button:hover {

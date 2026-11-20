@@ -75,6 +75,8 @@
     "@vscode/test-electron": "^3.0.0"
   },
   "dependencies": {
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "web-tree-sitter": "0.27.1"
   },
   "overrides": {

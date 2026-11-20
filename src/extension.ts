@@ -5,7 +5,9 @@ import * as vscode from "vscode";
 type WebviewMessage =
   | { type: "ready" }
   | { type: "error"; message: string }
-  | { type: "edit"; previousText: string; text: string };
+  | { type: "edit"; previousText: string; text: string }
+  | { type: "export"; pdf: string }
+  | { type: "export-error"; message: string };
 
 type Stylesheet = { name: string; text: string };
 
@@ -69,6 +71,18 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           void vscode.window.showErrorMessage(detail);
           return;
         }
+        if (message.type === "export-error") {
+          void vscode.window.showErrorMessage(`Viewlife could not prepare the export: ${message.message}`);
+          return;
+        }
+        if (message.type === "export") {
+          void this.savePdfExport(state, message.pdf).catch((error: unknown) => {
+            const detail = `Viewlife could not save the PDF: ${String(error)}`;
+            console.error(detail);
+            void vscode.window.showErrorMessage(detail);
+          });
+          return;
+        }
         if (
           message.type !== "edit" ||
           typeof message.text !== "string" ||
@@ -99,6 +113,32 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
   async refreshStylesheets(): Promise<void> {
     await Promise.all([...this.editors].map((state) => this.sendStylesheets(state)));
+  }
+
+  private async savePdfExport(state: EditorState, base64: string): Promise<void> {
+    if (typeof base64 !== "string" || !base64.trim()) {
+      throw new Error("The generated PDF is empty.");
+    }
+
+    const baseName =
+      path
+        .basename(state.document.fileName, path.extname(state.document.fileName))
+        .replace(/[<>:"/\\|?*\x00-\x1f]/g, "-") || "markdown";
+    const exportUri = await vscode.window.showSaveDialog({
+      title: "Save rendered Markdown as PDF",
+      defaultUri: vscode.Uri.file(path.join(path.dirname(state.document.fileName), `${baseName}.pdf`)),
+      filters: { "PDF document": ["pdf"] },
+    });
+    if (!exportUri) {
+      return;
+    }
+
+    const pdf = Buffer.from(base64, "base64");
+    if (pdf.subarray(0, 5).toString("ascii") !== "%PDF-") {
+      throw new Error("The generated file is not a valid PDF.");
+    }
+    await vscode.workspace.fs.writeFile(exportUri, pdf);
+    void vscode.window.showInformationMessage(`PDF saved to ${exportUri.fsPath}.`);
   }
 
   private async applyEdit(
