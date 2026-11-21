@@ -50,4 +50,4 @@ Run `pnpm install`, then `pnpm run compile`. To launch the extension, open this 
 
 ## Acknowledgements
 
-The Markdown renderer/editor is adapted from `md-dom` by Frank Mayer. See [LICENSE](./LICENSE) for its Zlib license and [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for bundled Tree-sitter licenses.
+The Markdown renderer/editor is adapted from `md-dom` by Frank Mayer. Viewlife's original source is licensed under the Zlib License; see [LICENSE.md](./LICENSE.md). Third-party runtime dependencies and bundled Tree-sitter grammars retain their own licenses, listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).

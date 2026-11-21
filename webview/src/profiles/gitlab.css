@@ -122,6 +122,11 @@
   color: var(--muted);
 }
 
+:root[data-profile="gitlab"] #editor [data-syntax="block_quote"] > [data-syntax="paragraph"] {
+  display: inline;
+  margin: 0;
+}
+
 :root[data-profile="gitlab"] #editor [data-syntax="code_span"],
 :root[data-profile="gitlab"] #editor code {
   padding: 0.2em 0.4em;

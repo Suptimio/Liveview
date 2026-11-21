@@ -31,3 +31,8 @@
   --code: var(--vscode-symbolIcon-functionForeground, #d2a8ff);
   --selection: var(--vscode-editor-selectionBackground, #264f78);
 }
+
+:root[data-profile="vscode"] #editor [data-syntax="block_quote"] > [data-syntax="paragraph"] {
+  display: inline;
+  margin: 0;
+}
