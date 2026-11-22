@@ -210,10 +210,16 @@ export async function createMarkdown() {
           const before = bounds[index];
           const after = bounds[index + 1];
           if (before === undefined || after === undefined) continue;
+          const cellStart = before + 1;
+          const cellEnd = after;
+          const cellText = source.slice(cellStart, cellEnd);
+
           cells.push({
             type: "pipe_table_cell",
-            sourceRange: { start: before + 1, end: after },
-            children: inline(before + 1, after, [], after),
+            sourceRange: { start: cellStart, end: cellEnd },
+            children: cellText.replace(/\u200B/g, "").trim() === ""
+              ? []
+              : inline(cellStart, cellEnd, [], cellEnd),
           });
         }
         return [{ type: index === 0 ? "pipe_table_header" : "pipe_table_row", children: cells }];

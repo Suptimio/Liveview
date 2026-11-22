@@ -671,7 +671,10 @@ try {
       if (lines.length > 2) lines.pop();
     } else {
       const columns = tableCells(lines[0] ?? "").length;
-      lines.push(`| ${Array.from({ length: columns }, () => "").join(" | ")} |`);
+      // lines.push(`| ${Array.from({ length: columns }, () => "").join(" | ")} |`);
+      lines.push(
+        `| ${Array.from({ length: columns }, () => "\u200B").join(" | ")} |`, // THIS NEEDS TO BE CHANGED BACK 
+      );
     }
     return `${lines.join("\n")}${trailingNewline ? "\n" : ""}`;
   }
@@ -883,8 +886,8 @@ try {
     try {
       localChange(
         currentSource.slice(0, start) +
-          resizeTable(currentSource.slice(start, end), detail.action) +
-          currentSource.slice(end),
+        resizeTable(currentSource.slice(start, end), detail.action) +
+        currentSource.slice(end),
         null,
       );
     } catch (error) {
