@@ -673,7 +673,7 @@ try {
       const columns = tableCells(lines[0] ?? "").length;
       // lines.push(`| ${Array.from({ length: columns }, () => "").join(" | ")} |`);
       lines.push(
-        `| ${Array.from({ length: columns }, () => "\u200B").join(" | ")} |`, // THIS NEEDS TO BE CHANGED BACK 
+        `| ${Array.from({ length: columns }, () => "\u200B").join(" | ")} |`, // THIS ADDS ZERO-WIDTH CHAR FOR EMPTY TABLE ROWS
       );
     }
     return `${lines.join("\n")}${trailingNewline ? "\n" : ""}`;
@@ -804,6 +804,15 @@ try {
   });
   editor.addEventListener("table-cell-focus", () => {
     tableCellEditing = true;
+
+    if (renderedActiveLine === -1) return;
+
+    renderedActiveLine = -1;
+
+    removeCaretPlaceholders();
+    patch(editor, markdown(currentSource));
+    ensureCaretPlaceholder(currentSource);
+    revealSyntax(editor);
   });
   editor.addEventListener("table-cell-blur", () => {
     tableCellEditing = false;
@@ -945,7 +954,8 @@ try {
           (target.matches("td[contenteditable='true']") ||
             target.matches("th[contenteditable='true']")),
       );
-      if (!isTableCell) tableCellEditing = false;
+
+      tableCellEditing = isTableCell;
     },
     true,
   );
@@ -957,20 +967,7 @@ try {
     }
   });
   function syncActiveLine(): void {
-    if (tableCellEditing) {
-      const activeTableCell = [
-        ...editor.querySelectorAll<HTMLElement>('[data-preview="table"]'),
-      ].some((host) => {
-        const active = host.shadowRoot?.activeElement;
-        return (
-          active instanceof HTMLElement &&
-          (active.matches("td[contenteditable='true']") ||
-            active.matches("th[contenteditable='true']"))
-        );
-      });
-      if (activeTableCell) return;
-      tableCellEditing = false;
-    }
+    if (tableCellEditing) return;
     const selection = readSelection(editor);
     const activeLine =
       document.activeElement === editor && selection

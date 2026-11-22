@@ -7,12 +7,12 @@ export type Preview =
   | { kind: "image"; src: string; alt: string }
   | { kind: "html"; source: string }
   | {
-      kind: "table";
-      rows: VNode[];
-      align: ("left" | "center" | "right")[];
-      start: number;
-      end: number;
-    };
+    kind: "table";
+    rows: VNode[];
+    align: ("left" | "center" | "right")[];
+    start: number;
+    end: number;
+  };
 
 const previews = new WeakMap<HTMLElement, string>();
 
