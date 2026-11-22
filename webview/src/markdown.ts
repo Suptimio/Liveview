@@ -210,7 +210,11 @@ export async function createMarkdown() {
           const before = bounds[index];
           const after = bounds[index + 1];
           if (before === undefined || after === undefined) continue;
-          cells.push({ type: "pipe_table_cell", children: inline(before + 1, after, [], after) });
+          cells.push({
+            type: "pipe_table_cell",
+            sourceRange: { start: before + 1, end: after },
+            children: inline(before + 1, after, [], after),
+          });
         }
         return [{ type: index === 0 ? "pipe_table_header" : "pipe_table_row", children: cells }];
       });
@@ -311,7 +315,13 @@ export async function createMarkdown() {
         return {
           type: node.type,
           children: [source.slice(node.startIndex, end)],
-          preview: { kind: "table", rows, align },
+          preview: {
+            kind: "table",
+            rows,
+            align,
+            start: node.startIndex,
+            end,
+          },
         };
       }
       if (

@@ -6,7 +6,13 @@ import type { VNode } from "./vdom";
 export type Preview =
   | { kind: "image"; src: string; alt: string }
   | { kind: "html"; source: string }
-  | { kind: "table"; rows: VNode[]; align: ("left" | "center" | "right")[] };
+  | {
+      kind: "table";
+      rows: VNode[];
+      align: ("left" | "center" | "right")[];
+      start: number;
+      end: number;
+    };
 
 const previews = new WeakMap<HTMLElement, string>();
 
@@ -26,10 +32,20 @@ export function patchPreview(
     if (!previews.has(host)) return;
     host.shadowRoot?.replaceChildren(document.createElement("slot"));
     host.removeAttribute("data-preview");
+    delete host.dataset.sourceStart;
+    delete host.dataset.sourceEnd;
     previews.delete(host);
     return;
   }
   const key = JSON.stringify(preview);
+  host.dataset.preview = preview.kind;
+  if (preview.kind === "table") {
+    host.dataset.sourceStart = String(preview.start);
+    host.dataset.sourceEnd = String(preview.end);
+  } else {
+    delete host.dataset.sourceStart;
+    delete host.dataset.sourceEnd;
+  }
   if (previews.get(host) === key) return;
   const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
   if (!host.shadowRoot?.childNodes.length) {
@@ -37,6 +53,7 @@ export function patchPreview(
       if (
         !host.hasAttribute("data-preview") ||
         host.dataset.preview === "html" ||
+        host.dataset.preview === "table" ||
         host.hasAttribute("data-active")
       )
         return;
@@ -49,7 +66,6 @@ export function patchPreview(
     }
   }
   previews.set(host, key);
-  host.dataset.preview = preview.kind;
   const style = document.createElement("style");
   style.textContent = syntaxStyle + previewStyle;
   const source = document.createElement("span");
@@ -58,7 +74,7 @@ export function patchPreview(
   const output = document.createElement("span");
   output.className = "preview";
   output.contentEditable = "false";
-  output.inert = preview.kind !== "html";
+  output.inert = preview.kind !== "html" && preview.kind !== "table";
   let decoration = output;
   if (preview.kind === "html") {
     const html = document.createElement("span");
@@ -99,6 +115,8 @@ export function patchPreview(
       output.textContent = "Image URLs must use HTTP or HTTPS.";
     }
   } else {
+    const wrapper = document.createElement("span");
+    wrapper.className = "table-wrapper";
     const table = document.createElement("table");
     for (const row of preview.rows) {
       if (
@@ -112,12 +130,122 @@ export function patchPreview(
         if (typeof cell === "string" || cell.type !== "pipe_table_cell") continue;
         const td = document.createElement(row.type === "pipe_table_header" ? "th" : "td");
         td.style.textAlign = preview.align[index++] ?? "left";
+        const range = cell.sourceRange;
+        if (range) {
+          td.dataset.sourceStart = String(range.start);
+          td.dataset.sourceEnd = String(range.end);
+        }
+        td.contentEditable = "true";
+        td.spellcheck = false;
+        td.addEventListener("focus", () => {
+          host.dispatchEvent(new CustomEvent("table-cell-focus", { bubbles: true, composed: true }));
+        });
+        td.addEventListener("blur", (event) => {
+          if (event.relatedTarget instanceof Node && table.contains(event.relatedTarget)) return;
+          host.dispatchEvent(new CustomEvent("table-cell-blur", { bubbles: true, composed: true }));
+        });
+        td.addEventListener("input", () => {
+          const start = Number(td.dataset.sourceStart);
+          const end = Number(td.dataset.sourceEnd);
+          host.dispatchEvent(
+            new CustomEvent("table-cell-input", {
+              bubbles: true,
+              composed: true,
+              detail: { start, end, text: plainText(td) },
+            }),
+          );
+        });
+        td.addEventListener("beforeinput", (event) => {
+          if (event.inputType === "insertParagraph" || event.inputType === "insertLineBreak") {
+            event.preventDefault();
+          }
+        });
+        td.addEventListener("keydown", (event) => {
+          if (event.key !== "Tab" && event.key !== "Enter") return;
+          event.preventDefault();
+          const cells = [...table.querySelectorAll<HTMLElement>("th, td")];
+          const current = cells.indexOf(td);
+          const next = cells[current + (event.shiftKey ? -1 : 1)];
+          next?.focus();
+        });
         patch(td, cell.children);
         tr.append(td);
       }
       table.append(tr);
     }
-    output.append(table);
+    const addColumn = document.createElement("button");
+    addColumn.type = "button";
+    addColumn.className = "table-add-column";
+    addColumn.textContent = "+";
+    addColumn.setAttribute("aria-label", "Add table column");
+    addColumn.title = "Add column";
+    addColumn.addEventListener("click", () => {
+      host.dispatchEvent(
+        new CustomEvent("table-resize", {
+          bubbles: true,
+          composed: true,
+          detail: { action: "column" },
+        }),
+      );
+    });
+    const removeColumn = document.createElement("button");
+    removeColumn.type = "button";
+    removeColumn.className = "table-remove-column";
+    removeColumn.textContent = "-";
+    removeColumn.setAttribute("aria-label", "Remove table column");
+    removeColumn.title = "Remove column";
+    removeColumn.addEventListener("click", () => {
+      host.dispatchEvent(
+        new CustomEvent("table-resize", {
+          bubbles: true,
+          composed: true,
+          detail: { action: "remove-column" },
+        }),
+      );
+    });
+    const addRow = document.createElement("button");
+    addRow.type = "button";
+    addRow.className = "table-add-row";
+    addRow.textContent = "+";
+    addRow.setAttribute("aria-label", "Add table row");
+    addRow.title = "Add row";
+    addRow.addEventListener("click", () => {
+      host.dispatchEvent(
+        new CustomEvent("table-resize", {
+          bubbles: true,
+          composed: true,
+          detail: { action: "row" },
+        }),
+      );
+    });
+    const removeRow = document.createElement("button");
+    removeRow.type = "button";
+    removeRow.className = "table-remove-row";
+    removeRow.textContent = "-";
+    removeRow.setAttribute("aria-label", "Remove table row");
+    removeRow.title = "Remove row";
+    removeRow.addEventListener("click", () => {
+      host.dispatchEvent(
+        new CustomEvent("table-resize", {
+          bubbles: true,
+          composed: true,
+          detail: { action: "remove-row" },
+        }),
+      );
+    });
+    wrapper.append(table, addColumn, removeColumn, addRow, removeRow);
+    output.append(wrapper);
   }
   root.replaceChildren(style, source, decoration);
+}
+
+function plainText(root: Node): string {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let text = "";
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const parent = node.parentElement;
+    if (parent?.closest('[data-syntax="marker"], [data-syntax^="list_marker_"]')) continue;
+    text += node.textContent ?? "";
+  }
+  return text.replaceAll("\n", " ");
 }

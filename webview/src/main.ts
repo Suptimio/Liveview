@@ -489,6 +489,7 @@ try {
   let currentSource = "";
   let documentVersion = 0;
   let renderedActiveLine = -1;
+  let tableCellEditing = false;
 
   function removeCaretPlaceholders(): void {
     for (const placeholder of editor.querySelectorAll("[data-caret-placeholder]")) {
@@ -630,6 +631,77 @@ try {
     replaceText(start, end, text);
   }
 
+  function tableCells(line: string): string[] {
+    const trimmed = line.trim();
+    const content = trimmed.startsWith("|") ? trimmed.slice(1) : trimmed;
+    const row = content.endsWith("|") ? content.slice(0, -1) : content;
+    const cells: string[] = [];
+    let start = 0;
+    for (let index = 0; index < row.length; index++) {
+      if (row[index] !== "|") continue;
+      let backslashes = 0;
+      for (let previous = index - 1; previous >= 0 && row[previous] === "\\"; previous--) {
+        backslashes++;
+      }
+      if (backslashes % 2 !== 0) continue;
+      cells.push(row.slice(start, index).trim());
+      start = index + 1;
+    }
+    cells.push(row.slice(start).trim());
+    return cells;
+  }
+
+  function resizeTable(
+    source: string,
+    action: "column" | "row" | "remove-column" | "remove-row",
+  ): string {
+    const trailingNewline = source.endsWith("\n");
+    const lines = source.split("\n");
+    if (trailingNewline) lines.pop();
+    if (!lines.length) return source;
+    if (action === "column" || action === "remove-column") {
+      if (action === "remove-column" && tableCells(lines[0] ?? "").length <= 1) return source;
+      for (const [index, line] of lines.entries()) {
+        const cells = tableCells(line);
+        if (action === "column") cells.push(index === 1 ? "---" : "");
+        else cells.pop();
+        lines[index] = `| ${cells.join(" | ")} |`;
+      }
+    } else if (action === "remove-row") {
+      if (lines.length > 2) lines.pop();
+    } else {
+      const columns = tableCells(lines[0] ?? "").length;
+      lines.push(`| ${Array.from({ length: columns }, () => "").join(" | ")} |`);
+    }
+    return `${lines.join("\n")}${trailingNewline ? "\n" : ""}`;
+  }
+
+  function insertTable(): void {
+    const selection = readSelection(editor);
+    const start = selection ? Math.min(selection.anchor, selection.focus) : currentSource.length;
+    const end = selection ? Math.max(selection.anchor, selection.focus) : start;
+    const before = currentSource.slice(0, start);
+    const after = currentSource.slice(end);
+    const prefix = before
+      ? before.endsWith("\n\n")
+        ? ""
+        : before.endsWith("\n")
+          ? "\n"
+          : "\n\n"
+      : "";
+    const suffix = after
+      ? after.startsWith("\n\n")
+        ? ""
+        : after.startsWith("\n")
+          ? "\n"
+          : "\n\n"
+      : "\n";
+    const table = "|  |  |\n| --- | --- |\n|  |  |";
+    replaceText(start, end, `${prefix}${table}${suffix}`, start + prefix.length + table.length);
+  }
+
+  element("insert-table").addEventListener("click", insertTable);
+
   function insertParagraph(): void {
     const selection = readSelection(editor);
     if (!selection) {
@@ -727,6 +799,98 @@ try {
       fail(error);
     }
   });
+  editor.addEventListener("table-cell-focus", () => {
+    tableCellEditing = true;
+  });
+  editor.addEventListener("table-cell-blur", () => {
+    tableCellEditing = false;
+  });
+  editor.addEventListener("table-cell-input", (event) => {
+    const detail = (event as CustomEvent<{
+      start: number;
+      end: number;
+      text: string;
+    }>).detail;
+    if (
+      !Number.isInteger(detail?.start) ||
+      !Number.isInteger(detail.end) ||
+      detail.start < 0 ||
+      detail.end < detail.start
+    )
+      return;
+    tableCellEditing = true;
+    const escape = (text: string) => text.replaceAll("|", "\\|").replaceAll("\n", " ");
+    const host = event.target;
+    if (!(host instanceof HTMLElement)) return;
+    const tableStart = Number(host.dataset.sourceStart);
+    const tableEnd = Number(host.dataset.sourceEnd);
+    if (
+      !Number.isInteger(tableStart) ||
+      !Number.isInteger(tableEnd) ||
+      detail.start < tableStart ||
+      detail.end > tableEnd
+    )
+      return;
+    const replacement = ` ${escape(detail.text.trim())} `;
+    const previousText = currentSource;
+    const nextSource =
+      currentSource.slice(0, detail.start) + replacement + currentSource.slice(detail.end);
+    const delta = replacement.length - (detail.end - detail.start);
+    if (nextSource === previousText) return;
+
+    const ranges = [
+      ...editor.querySelectorAll<HTMLElement>("[data-source-start][data-source-end]"),
+      ...(host.shadowRoot?.querySelectorAll<HTMLElement>(
+        "[data-source-start][data-source-end]",
+      ) ?? []),
+    ];
+    for (const range of ranges) {
+      const start = Number(range.dataset.sourceStart);
+      const end = Number(range.dataset.sourceEnd);
+      if (start >= detail.end) {
+        range.dataset.sourceStart = String(start + delta);
+        range.dataset.sourceEnd = String(end + delta);
+      } else if (end >= detail.end) {
+        range.dataset.sourceEnd = String(end + delta);
+      }
+    }
+    currentSource = nextSource;
+    const updatedTableEnd = tableEnd + delta;
+    host.dataset.sourceEnd = String(updatedTableEnd);
+    host.textContent = currentSource.slice(tableStart, updatedTableEnd);
+    sendEdit(previousText, currentSource);
+  });
+  editor.addEventListener("table-resize", (event) => {
+    const detail = (event as CustomEvent<{
+      action: "column" | "row" | "remove-column" | "remove-row";
+    }>).detail;
+    const target = event.target;
+    if (
+      !(target instanceof HTMLElement) ||
+      !Number.isInteger(Number(target.dataset.sourceStart))
+    )
+      return;
+    const start = Number(target.dataset.sourceStart);
+    if (start < 0 || start >= currentSource.length) return;
+    let end = start;
+    while (end < currentSource.length) {
+      const lineEnd = currentSource.indexOf("\n", end);
+      const line = currentSource.slice(end, lineEnd === -1 ? currentSource.length : lineEnd);
+      if (!/^[ \t]*\|/.test(line)) break;
+      end = lineEnd === -1 ? currentSource.length : lineEnd + 1;
+    }
+    if (end === start) return;
+    try {
+      localChange(
+        currentSource.slice(0, start) +
+          resizeTable(currentSource.slice(start, end), detail.action) +
+          currentSource.slice(end),
+        null,
+      );
+    } catch (error) {
+      fail(error);
+    }
+  });
   editor.addEventListener("compositionend", () => {
     try {
       localChange();
@@ -769,6 +933,19 @@ try {
     insertText(event.clipboardData?.getData("text/plain").replaceAll("\r\n", "\n") ?? "");
   });
   editor.addEventListener("pointerup", materializeLazyBlockQuote);
+  editor.addEventListener(
+    "pointerdown",
+    (event) => {
+      const isTableCell = event.composedPath().some(
+        (target) =>
+          target instanceof HTMLElement &&
+          (target.matches("td[contenteditable='true']") ||
+            target.matches("th[contenteditable='true']")),
+      );
+      if (!isTableCell) tableCellEditing = false;
+    },
+    true,
+  );
   editor.addEventListener("drop", (event) => event.preventDefault());
   editor.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
@@ -777,6 +954,20 @@ try {
     }
   });
   function syncActiveLine(): void {
+    if (tableCellEditing) {
+      const activeTableCell = [
+        ...editor.querySelectorAll<HTMLElement>('[data-preview="table"]'),
+      ].some((host) => {
+        const active = host.shadowRoot?.activeElement;
+        return (
+          active instanceof HTMLElement &&
+          (active.matches("td[contenteditable='true']") ||
+            active.matches("th[contenteditable='true']"))
+        );
+      });
+      if (activeTableCell) return;
+      tableCellEditing = false;
+    }
     const selection = readSelection(editor);
     const activeLine =
       document.activeElement === editor && selection

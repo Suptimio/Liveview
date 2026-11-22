@@ -7,11 +7,14 @@ Viewlife opens `.md` and `.markdown` files directly as a live WYSIWYG editor in 
 ## Features
 
 - Direct Markdown editor with live rendering and inline Markdown editing
+- Visually editable Markdown tables, with controls to add and remove rows and columns
 - A Basic style and selectable local GitHub, GitLab, and VS Code style profiles, plus light and dark themes
 - A style menu with an editable CSS example, CSS file import, and live mini-paper preview
 - Separate UI styling in `webview/src/ui.css`, independent of the paper styles in `webview/src/style.css`
 - Additional CSS files, reloaded while editing or saving CSS in VS Code
 - Images, tables, lists, and common Markdown syntax rendered in the document
+
+Use **Insert table** to add an empty table at the current selection (or at the end of the document). Edit cells directly, then use the `+` and `-` controls at the table edges to add or remove columns and rows. The table stays rendered while editing; changes are saved as Markdown.
 
 ## Custom stylesheets
 

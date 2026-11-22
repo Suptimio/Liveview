@@ -1,6 +1,14 @@
 import { patchPreview, type Preview } from "./preview";
 
-export type VNode = string | { type: string; children: VNode[]; start?: number; preview?: Preview };
+export type VNode =
+  | string
+  | {
+      type: string;
+      children: VNode[];
+      start?: number;
+      sourceRange?: { start: number; end: number };
+      preview?: Preview;
+    };
 
 export function patch(parent: HTMLElement, children: VNode[]): void {
   for (const [index, child] of children.entries()) {
@@ -26,6 +34,13 @@ export function patch(parent: HTMLElement, children: VNode[]): void {
       span.dataset.level = String(child.start);
     } else {
       delete span.dataset.level;
+    }
+    if (child.sourceRange) {
+      span.dataset.sourceStart = String(child.sourceRange.start);
+      span.dataset.sourceEnd = String(child.sourceRange.end);
+    } else {
+      delete span.dataset.sourceStart;
+      delete span.dataset.sourceEnd;
     }
 
     const counterReset = child.start === undefined ? "" : `markdown-list ${child.start - 1}`;
