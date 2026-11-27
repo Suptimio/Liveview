@@ -1,4 +1,4 @@
-// Global style preferences (theme, profile, custom CSS), shared by every Viewlife tab.
+// Global style preferences (theme, profile, custom CSS), shared by every ViewLive tab.
 // The extension stores them in globalState, injects them into the page and relays changes.
 import { getPanelState, onHostMessage, postToHost, setPanelState } from "./host";
 import type { RenderProfile } from "../paper/profiles";
@@ -16,7 +16,7 @@ export type Preferences = {
 /** The global preferences injected by the extension win over this panel's own state. */
 export function readSavedPreferences(): Preferences {
   const local = getPanelState() ?? {};
-  const script = document.getElementById("viewlife-preferences");
+  const script = document.getElementById("viewlive-preferences");
   if (!script?.textContent) return local;
   try {
     const global: unknown = JSON.parse(script.textContent);
@@ -24,7 +24,7 @@ export function readSavedPreferences(): Preferences {
       ? (global as Preferences)
       : local;
   } catch (error) {
-    console.error("Could not read saved Viewlife preferences.", error);
+    console.error("Could not read saved ViewLive preferences.", error);
     return local;
   }
 }

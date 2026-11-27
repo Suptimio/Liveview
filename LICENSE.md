@@ -1,9 +1,9 @@
-# Viewlife license
+# ViewLive license
 
-The original Viewlife source code is licensed under the **Zlib License**.
+The original ViewLive source code is licensed under the **Zlib License**.
 The complete license text is included below.
 
-That license applies only to original Viewlife code. Third-party components
+That license applies only to original ViewLive code. Third-party components
 bundled with the extension remain under their own licenses; see
 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) for the runtime dependency
 inventory, copyright attributions, and applicable license texts.
@@ -14,7 +14,7 @@ with the extension.
 
 ## Zlib License
 
-Copyright (c) 2026 Frank Mayer
+Copyright (c) 2026 Suptimio
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages

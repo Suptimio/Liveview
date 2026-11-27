@@ -141,3 +141,116 @@
   font-weight: 400;
   text-decoration: none;
 }
+/* ----- <details> / <summary>: a bracket ("[") that holds a title and collapsible content ----- */
+
+[data-syntax="details"] {
+  display: block;
+  position: relative;
+  margin: 0.4em 0 1em;
+  padding-left: 16px;
+}
+
+/* The bracket: left line with short ticks at the top and bottom. */
+[data-syntax="details"]::before {
+  position: absolute;
+  top: 0.3em;
+  bottom: 0.3em;
+  left: 0;
+  width: 9px;
+  border: 2px solid var(--border);
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
+  content: "";
+  pointer-events: none;
+  transition: border-color 150ms ease;
+}
+
+/* No color-mix() here: the PDF exporter (html2canvas) cannot parse it. */
+[data-syntax="details"][data-open]::before,
+[data-syntax="details"]:hover::before {
+  border-color: var(--accent);
+  opacity: 0.55;
+}
+
+[data-syntax="details_summary"] {
+  display: block;
+  position: relative;
+  padding-left: 24px;
+  color: var(--heading);
+  font-weight: 600;
+}
+
+/* The chevron, drawn in the summary's left padding; pressing it toggles the block.
+   Drawn with two borders (no SVG mask): the PDF exporter cannot render CSS masks. */
+[data-syntax="details_summary"]::before {
+  position: absolute;
+  top: calc(0.5lh - 4px);
+  left: 4px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  content: "";
+  cursor: pointer;
+  transform: rotate(-45deg);
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+[data-syntax="details_summary"]:hover::before {
+  border-color: var(--accent);
+}
+
+[data-syntax="details"][data-open] > [data-syntax="details_summary"]::before {
+  transform: rotate(45deg);
+}
+
+[data-syntax="details_label"]:empty::before {
+  content: "Details";
+}
+
+/* The HTML tags stay in the text but are hidden; <summary> shows while editing the title. */
+[data-syntax="details_marker"],
+[data-syntax="details_tag"] {
+  display: none;
+}
+
+[data-syntax="details_summary"][data-active] > [data-syntax="details_tag"] {
+  display: inline;
+  color: var(--marker);
+  font-family: ui-monospace, monospace;
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+[data-syntax="details_body"] {
+  display: none;
+  padding-top: 0.5em;
+  font-weight: 400;
+}
+
+[data-syntax="details"][data-open] > [data-syntax="details_body"],
+[data-syntax="details_body"][data-active] {
+  display: block;
+}
+
+/* Source mode (pen button, editor/details.ts): show this block's HTML tags as editable text. */
+[data-syntax="details"][data-source] > [data-syntax="details_summary"] > :is([data-syntax="details_marker"], [data-syntax="details_tag"]),
+[data-syntax="details"][data-source] > [data-syntax="details_marker"] {
+  display: inline;
+  color: var(--marker);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
+[data-syntax="details"][data-source] > [data-syntax="details_summary"] {
+  padding-left: 0;
+}
+
+[data-syntax="details"][data-source] > [data-syntax="details_summary"]::before {
+  display: none;
+}
+
+[data-syntax="details"][data-source] > [data-syntax="details_body"] {
+  display: block;
+}

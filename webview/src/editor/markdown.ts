@@ -21,6 +21,10 @@ const voidTags = new Set([
 
 const lineEndingNodes = new Set(["atx_heading", "list_item", "paragraph"]);
 
+/** Containers whose children are top-level blocks; `<details>` is only grouped there. */
+const blockContainers = new Set(["document", "section", "details_body"]);
+const detailsOpenTag = /^[ \t]{0,3}<details\b(?:[^>"']|"[^"]*"|'[^']*')*>/i;
+
 function htmlEnd(source: string, start: number) {
   const opening = source
     .slice(start)
@@ -67,12 +71,22 @@ function changedRange(before: string, after: string): Edit {
   });
 }
 
+// The WebAssembly runtime may only be initialised once; every renderer shares it.
+let languages: Promise<[Language, Language]> | undefined;
+
+function loadLanguages(): Promise<[Language, Language]> {
+  languages ??= Parser.init({ locateFile: () => runtimeUrl }).then(() =>
+    Promise.all([
+      Language.load(`${import.meta.env.BASE_URL}wasm/tree-sitter-markdown.wasm`),
+      Language.load(`${import.meta.env.BASE_URL}wasm/tree-sitter-markdown_inline.wasm`),
+    ]),
+  );
+  return languages;
+}
+
+/** Creates an independent renderer (own parse state); used by the editor and link previews. */
 export async function createMarkdown() {
-  await Parser.init({ locateFile: () => runtimeUrl });
-  const [blockLanguage, inlineLanguage] = await Promise.all([
-    Language.load(`${import.meta.env.BASE_URL}wasm/tree-sitter-markdown.wasm`),
-    Language.load(`${import.meta.env.BASE_URL}wasm/tree-sitter-markdown_inline.wasm`),
-  ]);
+  const [blockLanguage, inlineLanguage] = await loadLanguages();
   const blockParser = new Parser();
   const inlineParser = new Parser();
   blockParser.setLanguage(blockLanguage);
@@ -131,6 +145,15 @@ export async function createMarkdown() {
             )
             ? lineEndingLength(child.endIndex)
             : 0;
+        if (child.type === "html_block" && blockContainers.has(node.type ?? "") && detailsOpenTag.test(source.slice(child.startIndex, child.endIndex))) {
+          const details = renderDetails(child.startIndex);
+          if (details) {
+            result.push(details.node);
+            coveredUntil = details.end;
+            offset = details.end;
+            continue;
+          }
+        }
         const end =
           child.type === "html_tag" ||
             ((node.type === undefined || node.type === "ERROR") && child.type === "<")
@@ -224,6 +247,103 @@ export async function createMarkdown() {
         }
         return [{ type: index === 0 ? "pipe_table_header" : "pipe_table_row", children: cells }];
       });
+    }
+
+    /** Block nodes overlapping [start, end); sections are flattened (headings start new sections). */
+    function blocksIn(parent: Node, start: number, end: number, out: Node[] = []): Node[] {
+      for (const child of parent.children) {
+        if (child.endIndex <= start || child.startIndex >= end) continue;
+        if (child.type === "section") blocksIn(child, start, end, out);
+        else out.push(child);
+      }
+      return out;
+    }
+
+    /**
+     * `<details><summary>Title</summary> … </details>` as a collapsible block whose body is
+     * rendered as Markdown (like GitHub does when blank lines separate the tags from the content).
+     * The tags stay in the text (hidden by CSS) so the source round-trips unchanged.
+     * Returns null to fall back to the plain HTML preview.
+     */
+    function renderDetails(start: number): { node: VNode; end: number } | null {
+      if (!blockTree) return null;
+      const end = htmlEnd(source, start);
+      if (end === null) return null;
+      const whole = source.slice(start, end);
+      const openTag = whole.match(detailsOpenTag);
+      const closeTag = whole.match(/<\/details\s*>$/i);
+      if (!openTag || !closeTag) return null;
+      const openEnd = start + openTag[0].length;
+      const closeStart = end - closeTag[0].length;
+
+      const summary = source
+        .slice(openEnd, closeStart)
+        .match(/^(\s*)(<summary\b(?:[^>"']|"[^"]*"|'[^']*')*>)([\s\S]*?)(<\/summary\s*>)/i);
+      const summaryStart = openEnd + (summary?.[1]?.length ?? 0);
+      const labelStart = summaryStart + (summary?.[2]?.length ?? 0);
+      const labelEnd = labelStart + (summary?.[3]?.length ?? 0);
+      const summaryEnd = labelEnd + (summary?.[4]?.length ?? 0);
+      const bodyStart = summaryEnd + (source.slice(summaryEnd, closeStart).match(/^\s*/)?.[0].length ?? 0);
+
+      const savedCovered = coveredUntil;
+      const savedTrees = nextInlineTrees.length;
+      const fail = () => {
+        coveredUntil = savedCovered;
+        for (const tree of nextInlineTrees.splice(savedTrees)) tree.delete();
+        return null;
+      };
+
+      const label = labelEnd > labelStart ? inline(labelStart, labelEnd, [], labelEnd) : [];
+      coveredUntil = Math.max(coveredUntil, bodyStart);
+
+      const body: VNode[] = [];
+      let position = bodyStart;
+      for (const block of blocksIn(blockTree.rootNode, bodyStart, closeStart)) {
+        if (block.endIndex <= position) continue;
+        if (block.startIndex >= position && block.endIndex <= closeStart) {
+          body.push(...children({ startIndex: position, endIndex: block.endIndex, type: "details_body" }, [block]));
+          position = Math.max(block.endIndex, coveredUntil);
+        } else if (block.type === "html_block") {
+          // Raw HTML sharing lines with the tags (no blank line): render that part as HTML.
+          const clipStart = Math.max(block.startIndex, position);
+          const clipEnd = Math.min(block.endIndex, closeStart);
+          if (clipStart > position) body.push(source.slice(position, clipStart));
+          const html = source.slice(clipStart, clipEnd);
+          body.push(html.trim() ? { type: "html_block", children: [html], preview: { kind: "html", source: html } } : html);
+          position = clipEnd;
+          coveredUntil = Math.max(coveredUntil, clipEnd);
+        } else {
+          return fail();
+        }
+        if (position > closeStart) return fail();
+      }
+      // Trailing blank lines before </details> belong to the hidden closing tag.
+      const bodyEnd = Math.max(position, closeStart - (source.slice(position, closeStart).match(/\s*$/)?.[0].length ?? 0));
+      if (bodyEnd > position) body.push(source.slice(position, bodyEnd));
+
+      const part = (type: string, from: number, to: number): VNode[] =>
+        to > from ? [{ type, children: [source.slice(from, to)] }] : [];
+      return {
+        end,
+        node: {
+          type: "details",
+          open: /\sopen\b/i.test(openTag[0]),
+          children: [
+            {
+              type: "details_summary",
+              children: [
+                ...part("details_marker", start, summaryStart),
+                ...part("details_tag", summaryStart, labelStart),
+                { type: "details_label", children: label },
+                ...part("details_tag", labelEnd, summaryEnd),
+                ...part("details_marker", summaryEnd, bodyStart),
+              ],
+            },
+            { type: "details_body", children: body },
+            ...part("details_marker", bodyEnd, end),
+          ],
+        },
+      };
     }
 
     function render(node: Node, parentType = ""): VNode {
@@ -403,6 +523,15 @@ export async function createMarkdown() {
         }
       }
       if (!node.childCount) return source.slice(node.startIndex, node.endIndex);
+      if (node.type === "inline_link") {
+        // The target is kept on the element for Ctrl+click and hover previews (editor/links.ts).
+        const destination = node.namedChildren.find((child) => child.type === "link_destination");
+        return {
+          type: node.type,
+          href: destination?.text.replace(/^<|>$/g, ""),
+          children: children(node, node.children),
+        };
+      }
       return { type: node.type, children: children(node, node.children) };
     }
 

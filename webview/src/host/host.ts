@@ -6,7 +6,8 @@ export type Stylesheet = { name: string; text: string };
 export type HostMessage =
   | { type: "document"; text: string; baseUri: string; version: number }
   | { type: "stylesheets"; stylesheets: Stylesheet[] }
-  | { type: "preferences"; preferences: Preferences };
+  | { type: "preferences"; preferences: Preferences }
+  | { type: "markdown-file"; id: number; text?: string; baseUri?: string; error?: string };
 
 export type EditMessage = { type: "edit"; previousText: string; text: string };
 
@@ -16,7 +17,9 @@ export type ExtensionMessage =
   | { type: "error"; message: string }
   | { type: "export"; pdf: string }
   | { type: "export-error"; message: string }
-  | { type: "preferences"; preferences: Preferences };
+  | { type: "preferences"; preferences: Preferences }
+  | { type: "open-link"; href: string }
+  | { type: "read-markdown"; id: number; href: string };
 
 declare function acquireVsCodeApi(): {
   postMessage(message: ExtensionMessage): void;
@@ -55,6 +58,6 @@ export function showFatalError(editor: HTMLElement, error: unknown, context: str
   const notice = document.createElement("div");
   notice.className = "editor-error";
   notice.setAttribute("role", "alert");
-  notice.textContent = `Viewlife could not render this Markdown file: ${detail}`;
+  notice.textContent = `ViewLive could not render this Markdown file: ${detail}`;
   editor.replaceChildren(notice);
 }

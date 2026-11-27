@@ -1,6 +1,6 @@
 {
-  "name": "viewlife",
-  "displayName": "Viewlife",
+  "name": "viewlive",
+  "displayName": "ViewLive",
   "license": "Zlib",
   "description": "Live Markdown render and editor for VS Code",
   "version": "0.0.1",
@@ -11,14 +11,14 @@
     "Other"
   ],
   "activationEvents": [
-    "onCustomEditor:viewlife.markdown"
+    "onCustomEditor:viewlive.markdown"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "customEditors": [
       {
-        "viewType": "viewlife.markdown",
-        "displayName": "Viewlife Markdown",
+        "viewType": "viewlive.markdown",
+        "displayName": "ViewLive Markdown",
         "selector": [
           {
             "filenamePattern": "*.md"
@@ -31,16 +31,16 @@
       }
     ],
     "configuration": {
-      "title": "Viewlife",
+      "title": "ViewLive",
       "properties": {
-        "viewlife.customStylesheets": {
+        "viewlive.customStylesheets": {
           "type": "array",
           "scope": "resource",
           "default": [],
           "items": {
             "type": "string"
           },
-          "description": "Additional CSS files applied to Markdown in Viewlife. Paths are absolute or relative to the workspace."
+          "description": "Additional CSS files applied to Markdown in ViewLive. Paths are absolute or relative to the workspace."
         }
       }
     }

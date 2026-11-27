@@ -6,6 +6,10 @@ export type VNode =
       type: string;
       children: VNode[];
       start?: number;
+      /** `<details open>`: expanded by default. */
+      open?: boolean;
+      /** Link target of an inline link. */
+      href?: string;
       sourceRange?: { start: number; end: number };
       preview?: Preview;
     };
@@ -41,6 +45,13 @@ export function patch(parent: HTMLElement, children: VNode[]): void {
     } else {
       delete span.dataset.sourceStart;
       delete span.dataset.sourceEnd;
+    }
+
+    if (child.type === "details") span.toggleAttribute("data-default-open", child.open === true);
+    if (child.href !== undefined) {
+      if (span.dataset.href !== child.href) span.dataset.href = child.href;
+    } else if (span.dataset.href !== undefined) {
+      delete span.dataset.href;
     }
 
     const counterReset = child.start === undefined ? "" : `markdown-list ${child.start - 1}`;

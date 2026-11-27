@@ -4,13 +4,16 @@
 //   paper/    how the document looks: base + syntax CSS, render profiles, light/dark theme
 //   ui/       everything around the paper: top bar, tool bubble, styles panel (ui.css)
 //   host/     talking to the extension: messages, saved preferences, PDF export
+//   icons/    every UI icon as its own .svg file
 import { listActions } from "./actions/list";
 import { insertTableAction } from "./actions/table";
 import { createEditor } from "./editor/editor";
+import { setupLinks } from "./editor/links";
 import { setupExporter } from "./host/exporter";
 import { byId } from "./ui/dom";
 import { onHostMessage, postToHost, showFatalError } from "./host/host";
 import { createMarkdown } from "./editor/markdown";
+import { renderIcons } from "./icons";
 import { onPreferencesChanged, readSavedPreferences, savePreferences } from "./host/preferences";
 import { setupStyleMenu } from "./ui/style-menu";
 import { getTheme, isThemeMode, onThemeChange, setTheme } from "./paper/theme";
@@ -18,6 +21,7 @@ import { setupToolbar } from "./ui/toolbar";
 import { setupToolMenu } from "./ui/tool-menu";
 import "./ui/ui.css";
 
+renderIcons();
 const saved = readSavedPreferences();
 
 const savePreferencesNow = () => savePreferences({ theme: getTheme(), ...styleMenu.preferences() });
@@ -50,6 +54,7 @@ const editorElement = byId("editor");
 try {
   const editor = createEditor(editorElement, await createMarkdown());
   setupToolMenu(editor, [insertTableAction, ...listActions]);
+  setupLinks(editorElement);
 } catch (error) {
   showFatalError(editorElement, error, "Could not start the Markdown editor.");
 }

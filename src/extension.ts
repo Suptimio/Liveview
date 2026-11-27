@@ -8,11 +8,13 @@ type WebviewMessage =
   | { type: "edit"; previousText: string; text: string }
   | { type: "export"; pdf: string }
   | { type: "export-error"; message: string }
-  | { type: "preferences"; preferences: Preferences };
+  | { type: "preferences"; preferences: Preferences }
+  | { type: "open-link"; href: string }
+  | { type: "read-markdown"; id: number; href: string };
 
 type Stylesheet = { name: string; text: string };
 
-/** Style choices shared by every Viewlife editor and kept across sessions. */
+/** Style choices shared by every ViewLive editor and kept across sessions. */
 type Preferences = {
   theme?: "system" | "light" | "dark";
   profile?: "basic" | "github" | "gitlab" | "vscode";
@@ -21,7 +23,7 @@ type Preferences = {
   cssDraft?: string;
 };
 
-const preferencesKey = "viewlife.preferences";
+const preferencesKey = "viewlive.preferences";
 const maxStoredCss = 512 * 1024;
 
 function sanitizePreferences(value: unknown): Preferences {
@@ -57,6 +59,8 @@ type EditorState = {
   panel: vscode.WebviewPanel;
   document: vscode.TextDocument;
   documentBaseUri: string;
+  /** Workspace folder (or the document's folder): links may read files below it. */
+  resourceRoot: vscode.Uri;
   ready: boolean;
   editQueue: Promise<void>;
 };
@@ -84,6 +88,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       panel,
       document,
       documentBaseUri,
+      resourceRoot,
       ready: false,
       editQueue: Promise.resolve(),
     };
@@ -111,9 +116,17 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           return;
         }
         if (message.type === "error") {
-          const detail = `Viewlife could not start for ${path.basename(document.fileName)}: ${message.message}`;
+          const detail = `ViewLive could not start for ${path.basename(document.fileName)}: ${message.message}`;
           console.error(detail);
           void vscode.window.showErrorMessage(detail);
+          return;
+        }
+        if (message.type === "open-link" && typeof message.href === "string") {
+          void this.openLink(state, message.href);
+          return;
+        }
+        if (message.type === "read-markdown" && typeof message.href === "string") {
+          void this.readLinkedMarkdown(state, message.id, message.href);
           return;
         }
         if (message.type === "preferences") {
@@ -121,12 +134,12 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           return;
         }
         if (message.type === "export-error") {
-          void vscode.window.showErrorMessage(`Viewlife could not prepare the export: ${message.message}`);
+          void vscode.window.showErrorMessage(`ViewLive could not prepare the export: ${message.message}`);
           return;
         }
         if (message.type === "export") {
           void this.savePdfExport(state, message.pdf).catch((error: unknown) => {
-            const detail = `Viewlife could not save the PDF: ${String(error)}`;
+            const detail = `ViewLive could not save the PDF: ${String(error)}`;
             console.error(detail);
             void vscode.window.showErrorMessage(detail);
           });
@@ -142,7 +155,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         state.editQueue = state.editQueue
           .then(() => this.applyEdit(state, message))
           .catch(async (error: unknown) => {
-            const message = `Viewlife could not save ${path.basename(state.document.fileName)}: ${String(error)}`;
+            const message = `ViewLive could not save ${path.basename(state.document.fileName)}: ${String(error)}`;
             console.error(message);
             vscode.window.showErrorMessage(message);
             await this.sendDocument(state);
@@ -167,7 +180,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
   private async savePreferences(source: EditorState, value: unknown): Promise<void> {
     const preferences = sanitizePreferences(value);
     await this.context.globalState.update(preferencesKey, preferences);
-    // Keep other open Viewlife editors in sync with the new choice.
+    // Keep other open ViewLive editors in sync with the new choice.
     await Promise.all(
       [...this.editors]
         .filter((state) => state !== source && state.ready)
@@ -177,6 +190,78 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
   async refreshStylesheets(): Promise<void> {
     await Promise.all([...this.editors].map((state) => this.sendStylesheets(state)));
+  }
+
+  /**
+   * Resolves a relative link of the document to a file. Like on GitHub, "/x" is relative to the
+   * repository (workspace) root. Fragments and queries are dropped; "#anchor" alone gives undefined.
+   */
+  private resolveLink(state: EditorState, href: string): vscode.Uri | undefined {
+    const target = href.split("#")[0]?.split("?")[0] ?? "";
+    if (!target) {
+      return undefined;
+    }
+    let decoded = target;
+    try {
+      decoded = decodeURIComponent(target);
+    } catch {
+      // Keep the raw text when it is not valid percent-encoding.
+    }
+    const base = decoded.startsWith("/") ? state.resourceRoot : vscode.Uri.joinPath(state.document.uri, "..");
+    return vscode.Uri.joinPath(base, decoded);
+  }
+
+  /** Ctrl+click on a link: web links open in the browser, files in VS Code (Markdown in ViewLive). */
+  private async openLink(state: EditorState, href: string): Promise<void> {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+      if (/^(https?|mailto):/i.test(href)) {
+        await vscode.env.openExternal(vscode.Uri.parse(href));
+      }
+      return;
+    }
+    const uri = this.resolveLink(state, href);
+    if (!uri) {
+      return;
+    }
+    try {
+      const stat = await vscode.workspace.fs.stat(uri);
+      if (stat.type & vscode.FileType.Directory) {
+        await vscode.commands.executeCommand("revealInExplorer", uri);
+        return;
+      }
+    } catch {
+      void vscode.window.showWarningMessage(`ViewLive: the linked file "${href}" does not exist.`);
+      return;
+    }
+    await vscode.commands.executeCommand("vscode.open", uri);
+  }
+
+  /** Hover preview of a linked Markdown file. Only files below the resource root are read. */
+  private async readLinkedMarkdown(state: EditorState, id: unknown, href: string): Promise<void> {
+    const reply = (data: { text?: string; baseUri?: string; error?: string }) =>
+      state.panel.webview.postMessage({ type: "markdown-file", id, ...data });
+    const uri = /^[a-z][a-z0-9+.-]*:/i.test(href) ? undefined : this.resolveLink(state, href);
+    if (!uri || !/\.(md|markdown)$/i.test(uri.path)) {
+      await reply({ error: "Not a Markdown file." });
+      return;
+    }
+    // path.relative also handles Windows drive-letter case ("C:" vs "c:").
+    const relative = path.relative(state.resourceRoot.fsPath, uri.fsPath);
+    if (uri.scheme !== state.resourceRoot.scheme || relative.startsWith("..") || path.isAbsolute(relative)) {
+      await reply({ error: "Only files inside the workspace can be previewed." });
+      return;
+    }
+    let text: string;
+    try {
+      // An open (possibly unsaved) editor for that file wins over the file on disk.
+      const open = vscode.workspace.textDocuments.find((document) => document.uri.toString() === uri.toString());
+      text = open ? open.getText() : new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
+    } catch {
+      await reply({ error: "File not found." });
+      return;
+    }
+    const baseUri = `${state.panel.webview.asWebviewUri(vscode.Uri.joinPath(uri, "..")).toString()}/`;
+    await reply({ text: normalizeLineEndings(text), baseUri });
   }
 
   private async savePdfExport(state: EditorState, base64: string): Promise<void> {
@@ -225,7 +310,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     );
     const applied = await vscode.workspace.applyEdit(edit);
     if (!applied) {
-      vscode.window.showErrorMessage(`Viewlife could not update ${path.basename(state.document.fileName)}.`);
+      vscode.window.showErrorMessage(`ViewLive could not update ${path.basename(state.document.fileName)}.`);
       await this.sendDocument(state);
     }
   }
@@ -247,7 +332,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       return;
     }
     const entries = vscode.workspace
-      .getConfiguration("viewlife", state.document.uri)
+      .getConfiguration("viewlive", state.document.uri)
       .get<string[]>("customStylesheets", []);
     const folder = vscode.workspace.getWorkspaceFolder(state.document.uri);
     const stylesheets: Stylesheet[] = [];
@@ -283,7 +368,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       return;
     }
     this.reportedStylesheetErrors.add(entry);
-    const message = `Viewlife could not load stylesheet "${entry}": ${reason}`;
+    const message = `ViewLive could not load stylesheet "${entry}": ${reason}`;
     console.error(message);
     void vscode.window.showWarningMessage(message);
   }
@@ -299,7 +384,7 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       .replaceAll("<", "\\u003c")
       .replaceAll(" ", "\\u2028")
       .replaceAll(" ", "\\u2029");
-    const preferencesScript = `<script type="application/json" id="viewlife-preferences">${preferences}</script>`;
+    const preferencesScript = `<script type="application/json" id="viewlive-preferences">${preferences}</script>`;
     return html
       .replace("<head>", `<head>\n<base href="${baseUri}">\n${csp}\n${preferencesScript}`)
       .replace(/<script\b(?![^>]*\bnonce=)([^>]*)>/g, `<script nonce="${nonce}"$1>`);
@@ -318,7 +403,7 @@ function getNonce(): string {
 export function activate(context: vscode.ExtensionContext): void {
   const provider = new MarkdownEditorProvider(context);
   context.subscriptions.push(
-    vscode.window.registerCustomEditorProvider("viewlife.markdown", provider, {
+    vscode.window.registerCustomEditorProvider("viewlive.markdown", provider, {
       webviewOptions: { retainContextWhenHidden: true },
       supportsMultipleEditorsPerDocument: true,
     }),
@@ -327,7 +412,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const refresh = () => void provider.refreshStylesheets();
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("viewlife.customStylesheets")) {
+      if (event.affectsConfiguration("viewlive.customStylesheets")) {
         refresh();
       }
     }),

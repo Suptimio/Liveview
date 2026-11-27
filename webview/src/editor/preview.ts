@@ -1,6 +1,6 @@
 import syntaxStyle from "../paper/syntax.css?inline";
 import previewStyle from "./preview.css?inline";
-import editIcon from "./edit.svg?raw";
+import { icons } from "../icons";
 import type { VNode } from "./vdom";
 
 export type Preview =
@@ -85,7 +85,7 @@ export function patchPreview(
     edit.className = "edit-html";
     edit.setAttribute("aria-label", "Edit HTML");
     edit.title = "Edit HTML";
-    edit.innerHTML = editIcon;
+    edit.innerHTML = icons.edit;
     edit.addEventListener("click", (event) => {
       event.stopPropagation();
       editSource(host);

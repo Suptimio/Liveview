@@ -3,6 +3,7 @@
 import { postToHost, onHostMessage, showFatalError, type EditMessage } from "../host/host";
 import { readEditorText, readSelection, restoreSelection, revealSyntax } from "./selection";
 import { patch } from "./vdom";
+import { setupDetails } from "./details";
 import { resizeTable, type TableResizeAction } from "../actions/table";
 import type { EditorContext, EditorSelection } from "../actions/types";
 import type { createMarkdown } from "./markdown";
@@ -10,6 +11,7 @@ import type { createMarkdown } from "./markdown";
 type Markdown = Awaited<ReturnType<typeof createMarkdown>>;
 
 export function createEditor(editor: HTMLElement, markdown: Markdown): EditorContext {
+  const details = setupDetails(editor);
   let health: "ready" | "failed" = "ready";
   let pendingSend: number | undefined;
   let pendingEdit: EditMessage | undefined;
@@ -87,6 +89,7 @@ export function createEditor(editor: HTMLElement, markdown: Markdown): EditorCon
     removeCaretPlaceholders();
     const activeOffset = document.activeElement === editor ? selection?.focus : undefined;
     patch(editor, markdown(source, activeOffset));
+    details.sync();
     currentSource = source;
     ensureCaretPlaceholder(source, selection?.focus);
     if (selection) {
@@ -252,6 +255,7 @@ export function createEditor(editor: HTMLElement, markdown: Markdown): EditorCon
 
     removeCaretPlaceholders();
     patch(editor, markdown(currentSource));
+    details.sync();
     ensureCaretPlaceholder(currentSource);
     revealSyntax(editor);
   });
@@ -423,6 +427,7 @@ export function createEditor(editor: HTMLElement, markdown: Markdown): EditorCon
     const focus = activeLine === -1 ? undefined : selection?.focus;
     removeCaretPlaceholders();
     patch(editor, markdown(currentSource, focus));
+    details.sync();
     ensureCaretPlaceholder(currentSource, selection?.focus);
     if (selection) restoreSelection(editor, selection);
     revealSyntax(editor);

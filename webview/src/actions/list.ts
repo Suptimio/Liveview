@@ -1,4 +1,5 @@
 // Sorting the Markdown list under the caret (A→Z, Z→A, by number).
+import { icons } from "../icons";
 import type { EditorAction, EditorContext } from "./types";
 
 export type ListSortMode = "alphabetical" | "reverse" | "numerical";
@@ -153,11 +154,8 @@ function sortAction(mode: ListSortMode, id: string, label: string, hint: string,
   };
 }
 
-const sortIcon = (top: string, bottom: string) =>
-  `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16m0 0-3-3m3 3 3-3"/><text x="16" y="11">${top}</text><text x="16" y="22">${bottom}</text></svg>`;
-
 export const listActions: EditorAction[] = [
-  sortAction("alphabetical", "sort-list-az", "Sort list A → Z", "apple, banana, cherry", sortIcon("A", "Z")),
-  sortAction("reverse", "sort-list-za", "Sort list Z → A", "cherry, banana, apple", sortIcon("Z", "A")),
-  sortAction("numerical", "sort-list-numbers", "Sort list by number", "2 eggs, 10 apples", sortIcon("1", "9")),
+  sortAction("alphabetical", "sort-list-az", "Sort list A → Z", "apple, banana, cherry", icons["sort-az"]),
+  sortAction("reverse", "sort-list-za", "Sort list Z → A", "cherry, banana, apple", icons["sort-za"]),
+  sortAction("numerical", "sort-list-numbers", "Sort list by number", "2 eggs, 10 apples", icons["sort-numbers"]),
 ];

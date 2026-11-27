@@ -26,7 +26,8 @@ async function embedLocalImages(paper: HTMLElement): Promise<void> {
   }
 }
 
-function cloneForExport(node: Node, shadowStyles: Set<string>): Node | undefined {
+/** Copy of `node` with shadow roots inlined (their CSS collected in `shadowStyles`) and editor-only bits removed. */
+export function cloneForExport(node: Node, shadowStyles: Set<string>): Node | undefined {
   if (node instanceof Element) {
     if (["SCRIPT", "IFRAME", "OBJECT", "EMBED"].includes(node.tagName)) return;
     if (node.matches(".source, .edit-html, [data-caret-placeholder]")) return;
@@ -99,6 +100,10 @@ export async function createPdf(paper: HTMLElement): Promise<string> {
   clone.style.margin = "0";
   // Borderless profiles paint the page with a huge paper-colored shadow; not wanted in the PDF.
   clone.style.boxShadow = "none";
+  // Paper has no "click to expand": print every <details> block opened.
+  for (const details of clone.querySelectorAll('[data-syntax="details"]')) {
+    details.setAttribute("data-open", "");
+  }
   clone.querySelector<HTMLElement>("#editor")?.style.setProperty("min-height", "0", "important");
   staging.append(clone);
   document.body.append(staging);

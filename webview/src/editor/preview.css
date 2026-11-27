@@ -51,6 +51,13 @@
 	opacity: 1;
 	pointer-events: auto;
 }
+/* Inside a <summary> title the block's own pen (editor/details.ts) edits the HTML: no second pen. */
+:host-context([data-syntax="details_label"]) .html-preview {
+	padding-right: 0;
+}
+:host-context([data-syntax="details_label"]) .edit-html {
+	display: none;
+}
 :host([data-syntax="html_block"]) .html-preview {
 	display: block;
 }

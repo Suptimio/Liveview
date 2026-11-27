@@ -1,4 +1,4 @@
-/* Viewlife UI: everything around the paper (toolbar, tool bubble, styles panel).
+/* ViewLive UI: everything around the paper (toolbar, tool bubble, styles panel).
    Paper / Markdown styling lives in paper/ (style.css, syntax.css, profiles/). */
 
 :root {
@@ -583,4 +583,105 @@ main {
   #custom-css-preview {
     height: min(400px, 55vh);
   }
+}
+
+
+/* ====================================================================
+   Link preview (editor/links.ts): hovering a link to another .md file
+   shows that file as a scaled-down paper. Ctrl/Cmd marks links clickable.
+   ==================================================================== */
+
+#editor.is-link-mode [data-syntax="inline_link"][data-href] {
+  cursor: pointer;
+}
+
+.link-preview {
+  --preview-width: 460px;
+  --preview-height: 320px;
+  --preview-scale: 0.5;
+
+  position: fixed;
+  z-index: 95;
+  width: var(--preview-width);
+  overflow: hidden;
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  background: var(--ui-background);
+  color: var(--ui-foreground);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 20%);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.link-preview[hidden] {
+  display: none;
+}
+
+.link-preview-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+.link-preview-name {
+  overflow: hidden;
+  color: var(--ui-foreground);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-preview-body {
+  height: var(--preview-height);
+  overflow: hidden;
+}
+
+/* Rendered at full size, then scaled down: a miniature of the real paper. */
+.link-preview iframe {
+  display: block;
+  width: calc(var(--preview-width) / var(--preview-scale));
+  height: calc(var(--preview-height) / var(--preview-scale));
+  border: 0;
+  transform: scale(var(--preview-scale));
+  transform-origin: 0 0;
+}
+
+.link-preview iframe[hidden],
+.link-preview-message[hidden] {
+  display: none;
+}
+
+.link-preview-message {
+  margin: 0;
+  padding: 16px;
+  color: var(--ui-muted);
+  font-size: 13px;
+}
+
+
+/* ====================================================================
+   Pen on collapsible blocks (editor/details.ts), same look as the pen
+   on HTML blocks (editor/preview.css).
+   ==================================================================== */
+
+.details-edit {
+  position: fixed;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.details-edit[hidden] {
+  display: none;
 }

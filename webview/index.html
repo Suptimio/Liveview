@@ -4,29 +4,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viewlife Markdown</title>
+  <title>ViewLive Markdown</title>
 </head>
 
 <body>
   <main>
     <header class="toolbar">
-      <div class="app-title">Viewlife</div>
+      <div class="app-title">ViewLive</div>
 
       <div class="toolbar-actions">
         <div class="theme-switch" role="group" aria-label="Theme">
-          <button type="button" class="theme-option" data-theme-mode="system" aria-pressed="true" title="Follow VS Code theme" aria-label="Follow VS Code theme">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" /><path d="M12 4.5v15a7.5 7.5 0 0 0 0-15Z" class="filled" /></svg>
+          <button type="button" class="theme-option" data-theme-mode="system" aria-pressed="true" title="Follow VS Code theme" aria-label="Follow VS Code theme" data-icon="theme-auto">
           </button>
-          <button type="button" class="theme-option" data-theme-mode="light" aria-pressed="false" title="Light" aria-label="Light theme">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" /></svg>
+          <button type="button" class="theme-option" data-theme-mode="light" aria-pressed="false" title="Light" aria-label="Light theme" data-icon="theme-light">
           </button>
-          <button type="button" class="theme-option" data-theme-mode="dark" aria-pressed="false" title="Dark" aria-label="Dark theme">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" /></svg>
+          <button type="button" class="theme-option" data-theme-mode="dark" aria-pressed="false" title="Dark" aria-label="Dark theme" data-icon="theme-dark">
           </button>
         </div>
         <span class="toolbar-separator" aria-hidden="true"></span>
-        <button type="button" id="export-pdf" class="toolbar-button" title="Save the rendered Markdown as a PDF">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" /></svg>
+        <button type="button" id="export-pdf" class="toolbar-button" title="Save the rendered Markdown as a PDF" data-icon="export">
           <span>Export PDF</span>
         </button>
         <div class="style-menu">
@@ -38,8 +34,8 @@
             aria-expanded="false"
             aria-controls="style-menu-panel"
             title="Styles"
+            data-icon="styles"
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>
             <span>Styles</span>
           </button>
           <section id="style-menu-panel" class="style-menu-panel" aria-label="Styles" hidden>
@@ -63,10 +59,12 @@
 
             <div class="css-preview-container">
               <h3>Live preview</h3>
+              <!-- allow-same-origin: VS Code does not paint a fully sandboxed iframe here.
+                   Scripts stay blocked (no allow-scripts). -->
               <iframe
                 id="custom-css-preview"
                 title="Live preview of selected CSS profile"
-                sandbox
+                sandbox="allow-same-origin"
               ></iframe>
             </div>
 

@@ -1,4 +1,4 @@
-// The built-in CSS shipped with Viewlife: the editable "Basic" preset and the profile sheets.
+// The built-in CSS shipped with ViewLive: the editable "Basic" preset and the profile sheets.
 import type { RenderProfile } from "./profiles";
 import githubProfileCss from "./profiles/github.css?inline";
 import gitlabProfileCss from "./profiles/gitlab.css?inline";

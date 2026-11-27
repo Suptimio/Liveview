@@ -1,8 +1,8 @@
-# Viewlife
+# ViewLive
 
 ---
 
-Viewlife opens `.md` and `.markdown` files directly as a live WYSIWYG editor in VS Code. Markdown edits are written back to the file, so normal VS Code saving, undo, and file-change handling continue to work.
+ViewLive opens `.md` and `.markdown` files directly as a live WYSIWYG editor in VS Code. Markdown edits are written back to the file, so normal VS Code saving, undo, and file-change handling continue to work.
 
 ## Features
 
@@ -18,12 +18,12 @@ Use **Insert table** to add an empty table at the current selection (or at the e
 
 ## Custom stylesheets
 
-Add stylesheet paths to the VS Code setting `viewlife.customStylesheets`. Paths may be absolute or relative to the workspace folder:
+Add stylesheet paths to the VS Code setting `viewlive.customStylesheets`. Paths may be absolute or relative to the workspace folder:
 
 ```json
 {
-  "viewlife.customStylesheets": [
-    ".viewlife/document.css",
+  "viewlive.customStylesheets": [
+    ".viewlive/document.css",
     "C:/styles/print.css"
   ]
 }
@@ -51,6 +51,6 @@ The shared layout can be customized through CSS variables. For example:
 
 Run `pnpm install`, then `pnpm run compile`. To launch the extension, open this folder in VS Code and press `F5`.
 
-## Acknowledgements
+## License
 
-The Markdown renderer/editor is adapted from `md-dom` by Frank Mayer. Viewlife's original source is licensed under the Zlib License; see [LICENSE.md](./LICENSE.md). Third-party runtime dependencies and bundled Tree-sitter grammars retain their own licenses, listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+ViewLive's original source is licensed under the Zlib License; see [LICENSE.md](./LICENSE.md). Third-party runtime dependencies and bundled Tree-sitter grammars retain their own licenses, listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).

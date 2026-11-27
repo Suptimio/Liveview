@@ -1,12 +1,7 @@
 // Floating tool bubble on the left: expands into a vertical icon rail of editor actions.
 // Every action shows a small tooltip with its name and a preview of what it produces.
 import type { EditorAction, EditorContext } from "../actions/types";
-
-const icon = (body: string) => `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
-const icons = {
-  tools: icon(`<path d="M12 5v14M5 12h14"/>`),
-  close: icon(`<path d="M6 6l12 12M18 6 6 18"/>`),
-};
+import { icons } from "../icons";
 
 export function setupToolMenu(editor: EditorContext, actions: EditorAction[]): HTMLElement {
   const root = document.createElement("nav");
