@@ -15,6 +15,15 @@
   --editor-border: transparent;
   --editor-radius: 0;
   --editor-padding: 0;
+
+  --table-cell-padding: 8px 12px;
+  --table-cell-border-width: 1px;
+  --table-header-weight: 600;
+}
+
+/* No "page" around the document on the real site: fill the view with the paper color. */
+:root[data-profile="gitlab"] .paper[data-theme] {
+  --paper-shadow: 0 0 0 200vmax var(--background);
 }
 
 :root[data-profile="gitlab"] .paper[data-theme="light"] {
@@ -27,6 +36,8 @@
   --accent: #1f75cb;
   --code: #333238;
   --marker: #737278;
+  --table-header-background: #f0f0f0;
+  --table-border-color: #dcdcde;
 }
 
 :root[data-profile="gitlab"] .paper[data-theme="dark"] {
@@ -39,6 +50,8 @@
   --accent: #63a6e9;
   --code: #e3e3e3;
   --marker: #a4a3a8;
+  --table-header-background: #2b2a2f;
+  --table-border-color: #525159;
 }
 
 :root[data-profile="gitlab"] #editor [data-syntax="atx_heading"],
@@ -206,11 +219,20 @@
 
 :root[data-profile="gitlab"] #editor th,
 :root[data-profile="gitlab"] #editor td {
-  padding: 8px 12px;
-  border: 1px solid var(--border);
+  padding: var(--table-cell-padding);
+  border: var(--table-cell-border-width) solid var(--table-border-color);
 }
 
 :root[data-profile="gitlab"] #editor th {
-  font-weight: 600;
-  background: var(--surface);
+  border-bottom-width: var(--table-divider-width, var(--table-cell-border-width));
+  font-weight: var(--table-header-weight);
+  background: var(--table-header-background);
+}
+
+:root[data-profile="gitlab"] #editor tr + tr > td {
+  border-top-width: var(--table-divider-width, var(--table-cell-border-width));
+}
+
+:root[data-profile="gitlab"] #editor tr:nth-child(2n + 3) > td {
+  background: var(--table-stripe-background, transparent);
 }

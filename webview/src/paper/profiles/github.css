@@ -15,6 +15,16 @@
   --editor-border: transparent;
   --editor-radius: 0;
   --editor-padding: 0;
+
+  --table-cell-padding: 6px 13px;
+  --table-cell-border-width: 1px;
+  --table-header-weight: 600;
+  --table-header-background: transparent;
+}
+
+/* No "page" around the document on the real site: fill the view with the paper color. */
+:root[data-profile="github"] .paper[data-theme] {
+  --paper-shadow: 0 0 0 200vmax var(--background);
 }
 
 :root[data-profile="github"] .paper[data-theme="light"] {
@@ -27,6 +37,8 @@
   --accent: #0969da;
   --code: #1f2328;
   --marker: #656d76;
+  --table-border-color: #d1d9e0;
+  --table-stripe-background: #f6f8fa;
 }
 
 :root[data-profile="github"] .paper[data-theme="dark"] {
@@ -39,6 +51,8 @@
   --accent: #4493f8;
   --code: #e6edf3;
   --marker: #9198a1;
+  --table-border-color: #3d444d;
+  --table-stripe-background: #151b23;
 }
 
 :root[data-profile="github"] #editor [data-syntax="atx_heading"],
@@ -214,11 +228,20 @@
 
 :root[data-profile="github"] #editor th,
 :root[data-profile="github"] #editor td {
-  padding: 6px 13px;
-  border: 1px solid var(--border);
+  padding: var(--table-cell-padding);
+  border: var(--table-cell-border-width) solid var(--table-border-color);
 }
 
 :root[data-profile="github"] #editor th {
-  font-weight: 600;
-  background: var(--surface);
+  border-bottom-width: var(--table-divider-width, var(--table-cell-border-width));
+  font-weight: var(--table-header-weight);
+  background: var(--table-header-background);
+}
+
+:root[data-profile="github"] #editor tr + tr > td {
+  border-top-width: var(--table-divider-width, var(--table-cell-border-width));
+}
+
+:root[data-profile="github"] #editor tr:nth-child(2n + 3) > td {
+  background: var(--table-stripe-background, transparent);
 }

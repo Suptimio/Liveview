@@ -98,10 +98,31 @@ table {
 	max-width: 100%;
 	padding: 8px;
 }
+/*
+ * Table look is driven by variables so render profiles (github.css, ...) can
+ * style tables living inside this shadow root. Custom properties inherit
+ * through the shadow boundary, selectors do not.
+ */
 th,
 td {
-	padding: 6px 14px;
-	border: 1px solid var(--border);
+	padding: var(--table-cell-padding, 6px 14px);
+	border: var(--table-cell-border-width, 1px) solid var(--table-border-color, var(--border));
+}
+th {
+	border-bottom-width: var(--table-divider-width, var(--table-cell-border-width, 1px));
+	font-weight: var(--table-header-weight, 600);
+}
+tr + tr > td {
+	border-top-width: var(--table-divider-width, var(--table-cell-border-width, 1px));
+}
+tr:nth-child(2n + 3) > td {
+	background: var(--table-stripe-background, transparent);
+}
+td::selection,
+th::selection,
+td *::selection,
+th *::selection {
+	background: var(--selection);
 }
 td[contenteditable="true"],
 th[contenteditable="true"] {
@@ -115,7 +136,7 @@ th[contenteditable="true"]:focus {
 	box-shadow: inset 0 0 0 2px var(--accent);
 }
 th {
-	background: var(--surface);
+	background: var(--table-header-background, var(--surface));
 }
 .table-add-column,
 .table-add-row,

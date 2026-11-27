@@ -7,9 +7,51 @@ type WebviewMessage =
   | { type: "error"; message: string }
   | { type: "edit"; previousText: string; text: string }
   | { type: "export"; pdf: string }
-  | { type: "export-error"; message: string };
+  | { type: "export-error"; message: string }
+  | { type: "preferences"; preferences: Preferences };
 
 type Stylesheet = { name: string; text: string };
+
+/** Style choices shared by every Viewlife editor and kept across sessions. */
+type Preferences = {
+  theme?: "system" | "light" | "dark";
+  profile?: "basic" | "github" | "gitlab" | "vscode";
+  customCssActive?: boolean;
+  appliedCss?: string;
+  cssDraft?: string;
+};
+
+const preferencesKey = "viewlife.preferences";
+const maxStoredCss = 512 * 1024;
+
+function sanitizePreferences(value: unknown): Preferences {
+  if (typeof value !== "object" || value === null) {
+    return {};
+  }
+  const input = value as Record<string, unknown>;
+  const preferences: Preferences = {};
+  if (input.theme === "system" || input.theme === "light" || input.theme === "dark") {
+    preferences.theme = input.theme;
+  }
+  if (
+    input.profile === "basic" ||
+    input.profile === "github" ||
+    input.profile === "gitlab" ||
+    input.profile === "vscode"
+  ) {
+    preferences.profile = input.profile;
+  }
+  if (typeof input.customCssActive === "boolean") {
+    preferences.customCssActive = input.customCssActive;
+  }
+  if (typeof input.appliedCss === "string" && input.appliedCss.length <= maxStoredCss) {
+    preferences.appliedCss = input.appliedCss;
+  }
+  if (typeof input.cssDraft === "string" && input.cssDraft.length <= maxStoredCss) {
+    preferences.cssDraft = input.cssDraft;
+  }
+  return preferences;
+}
 
 type EditorState = {
   panel: vscode.WebviewPanel;
@@ -61,6 +103,9 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       (message: WebviewMessage) => {
         if (message.type === "ready") {
           state.ready = true;
+          // The HTML carries the preferences from when it was built; another tab may have
+          // changed them while this one was loading.
+          void panel.webview.postMessage({ type: "preferences", preferences: this.getPreferences() });
           void this.sendDocument(state);
           void this.sendStylesheets(state);
           return;
@@ -69,6 +114,10 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
           const detail = `Viewlife could not start for ${path.basename(document.fileName)}: ${message.message}`;
           console.error(detail);
           void vscode.window.showErrorMessage(detail);
+          return;
+        }
+        if (message.type === "preferences") {
+          void this.savePreferences(state, message.preferences);
           return;
         }
         if (message.type === "export-error") {
@@ -109,6 +158,21 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
       }
     });
     panel.onDidDispose(() => documentChanges.dispose(), null, this.context.subscriptions);
+  }
+
+  private getPreferences(): Preferences {
+    return sanitizePreferences(this.context.globalState.get(preferencesKey));
+  }
+
+  private async savePreferences(source: EditorState, value: unknown): Promise<void> {
+    const preferences = sanitizePreferences(value);
+    await this.context.globalState.update(preferencesKey, preferences);
+    // Keep other open Viewlife editors in sync with the new choice.
+    await Promise.all(
+      [...this.editors]
+        .filter((state) => state !== source && state.ready)
+        .map((state) => state.panel.webview.postMessage({ type: "preferences", preferences })),
+    );
   }
 
   async refreshStylesheets(): Promise<void> {
@@ -230,8 +294,14 @@ class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     const nonce = getNonce();
     const baseUri = `${webview.asWebviewUri(root).toString()}/`;
     const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri ${webview.cspSource}; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https: http: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' 'wasm-unsafe-eval';">`;
+    // Embedded as inert JSON so the webview can apply saved styles before the first paint.
+    const preferences = JSON.stringify(this.getPreferences())
+      .replaceAll("<", "\\u003c")
+      .replaceAll(" ", "\\u2028")
+      .replaceAll(" ", "\\u2029");
+    const preferencesScript = `<script type="application/json" id="viewlife-preferences">${preferences}</script>`;
     return html
-      .replace("<head>", `<head>\n<base href="${baseUri}">\n${csp}`)
+      .replace("<head>", `<head>\n<base href="${baseUri}">\n${csp}\n${preferencesScript}`)
       .replace(/<script\b(?![^>]*\bnonce=)([^>]*)>/g, `<script nonce="${nonce}"$1>`);
   }
 }

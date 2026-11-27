@@ -1,0 +1,317 @@
+/*
+ * VS Code profile — modelled after VS Code's built-in Markdown preview.
+ *
+ * Colors: the static values are the defaults of "Light Modern" / "Dark Modern".
+ * When the webview runs inside VS Code and the host theme matches the selected
+ * paper theme (body.vscode-light / body.vscode-dark), the live theme colors
+ * (--vscode-*) are used instead, so the paper looks like the real preview.
+ */
+
+:root[data-profile="vscode"] {
+  --profile-font: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+  --profile-mono: var(--vscode-editor-font-family, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace);
+
+  --content-width: 980px;
+  --content-padding-x: 26px;
+  --content-padding-top: 24px;
+  --content-padding-bottom: 64px;
+  --content-font-size: 14px;
+  --content-line-height: 1.6;
+
+  --paper-padding: 26px;
+  --paper-border: 0;
+  --paper-border-radius: 0;
+  --paper-shadow: none;
+  --editor-border: transparent;
+  --editor-radius: 0;
+  --editor-padding: 0;
+
+  /* Tables: no vertical lines, a rule under the header and between rows. */
+  --table-cell-padding: 5px 10px;
+  --table-cell-border-width: 0;
+  --table-divider-width: 1px;
+  --table-header-weight: 600;
+  --table-header-background: transparent;
+  --table-stripe-background: transparent;
+}
+
+/* No "page" around the document on the real site: fill the view with the paper color. */
+:root[data-profile="vscode"] .paper[data-theme] {
+  --paper-shadow: 0 0 0 200vmax var(--background);
+}
+
+/* ---------- Light (Light Modern defaults: pure white editor) ---------- */
+
+:root[data-profile="vscode"] .paper[data-theme="light"] {
+  --static-background: #ffffff;
+  --static-foreground: #3b3b3b;
+  --static-muted: #717171;
+  --static-surface: rgb(220 220 220 / 40%);
+  --static-code-span: rgb(0 0 0 / 6%);
+  --static-border: #e5e5e5;
+  --static-accent: #005fb8;
+  --static-selection: #add6ff;
+  --static-quote-background: #f8f8f8;
+  --static-quote-border: #e5e5e5;
+}
+
+/* ---------- Dark (Dark Modern defaults) ---------- */
+
+:root[data-profile="vscode"] .paper[data-theme="dark"] {
+  --static-background: #1f1f1f;
+  --static-foreground: #cccccc;
+  --static-muted: #9d9d9d;
+  --static-surface: rgb(10 10 10 / 40%);
+  --static-code-span: #3c3c3c;
+  --static-border: #3c3c3c;
+  --static-accent: #4daafc;
+  --static-selection: #264f78;
+  --static-quote-background: #2b2b2b;
+  --static-quote-border: #616161;
+}
+
+:root[data-profile="vscode"] .paper[data-theme] {
+  --background: var(--static-background);
+  --foreground: var(--static-foreground);
+  --heading: var(--static-foreground);
+  --muted: var(--static-muted);
+  --surface: var(--static-code-span);
+  --border: var(--static-border);
+  --accent: var(--static-accent);
+  --code: var(--static-foreground);
+  --selection: var(--static-selection);
+  --marker: var(--static-muted);
+  --quote-background: var(--static-quote-background);
+  --quote-border: var(--static-quote-border);
+  --code-block-background: var(--static-surface);
+}
+
+/* ---------- Live VS Code theme colors (host theme matches paper theme) ---------- */
+
+:root[data-profile="vscode"] body.vscode-light .paper[data-theme="light"],
+:root[data-profile="vscode"] body.vscode-dark .paper[data-theme="dark"],
+:root[data-profile="vscode"] body.vscode-high-contrast:not(.vscode-high-contrast-light) .paper[data-theme="dark"],
+:root[data-profile="vscode"] body.vscode-high-contrast-light .paper[data-theme="light"] {
+  /* Every live color keeps the static value as fallback, in case a theme omits it. */
+  --background: var(--vscode-editor-background, var(--static-background));
+  --foreground: var(--vscode-editor-foreground, var(--static-foreground));
+  --heading: var(--vscode-editor-foreground, var(--static-foreground));
+  --muted: var(--vscode-descriptionForeground, var(--static-muted));
+  --surface: var(--vscode-textPreformat-background, var(--static-code-span));
+  --border: var(--vscode-widget-border, var(--vscode-panel-border, var(--static-border)));
+  --accent: var(--vscode-textLink-foreground, var(--static-accent));
+  --code: var(--vscode-textPreformat-foreground, var(--vscode-editor-foreground, var(--static-foreground)));
+  --selection: var(--vscode-editor-selectionBackground, var(--static-selection));
+  --marker: var(--vscode-descriptionForeground, var(--static-muted));
+  --quote-background: var(--vscode-textBlockQuote-background, var(--static-quote-background));
+  --quote-border: var(--vscode-textBlockQuote-border, var(--static-quote-border));
+  --code-block-background: var(--vscode-textCodeBlock-background, var(--static-surface));
+}
+
+/* ---------- Headings ---------- */
+
+:root[data-profile="vscode"] #editor [data-syntax="atx_heading"],
+:root[data-profile="vscode"] #editor [data-syntax="setext_heading"],
+:root[data-profile="vscode"] #editor :is(h1, h2, h3, h4, h5, h6) {
+  display: block;
+  margin: 24px 0 16px;
+  color: var(--heading);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="atx_heading"][data-level="1"],
+:root[data-profile="vscode"] #editor h1 {
+  margin-top: 0;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+  font-size: 2em;
+  line-height: 1.2;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="atx_heading"][data-level="2"],
+:root[data-profile="vscode"] #editor h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.5em;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="atx_heading"][data-level="3"],
+:root[data-profile="vscode"] #editor h3 {
+  font-size: 1.25em;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="atx_heading"][data-level="4"],
+:root[data-profile="vscode"] #editor h4 {
+  font-size: 1em;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="atx_heading"][data-level="5"],
+:root[data-profile="vscode"] #editor h5 {
+  font-size: 0.875em;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="atx_heading"][data-level="6"],
+:root[data-profile="vscode"] #editor h6 {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+/* ---------- Text ---------- */
+
+:root[data-profile="vscode"] #editor [data-syntax="paragraph"],
+:root[data-profile="vscode"] #editor p {
+  display: block;
+  margin: 0 0 16px;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="strong_emphasis"],
+:root[data-profile="vscode"] #editor strong {
+  color: inherit;
+  font-weight: 700;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="emphasis"],
+:root[data-profile="vscode"] #editor em {
+  font-style: italic;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="strikethrough"],
+:root[data-profile="vscode"] #editor del {
+  color: inherit;
+  text-decoration: line-through;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="inline_link"],
+:root[data-profile="vscode"] #editor a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="inline_link"]:hover,
+:root[data-profile="vscode"] #editor a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Quotes ---------- */
+
+:root[data-profile="vscode"] #editor [data-syntax="block_quote"],
+:root[data-profile="vscode"] #editor blockquote {
+  display: block;
+  margin: 0 0 16px;
+  padding: 2px 16px 2px 10px;
+  border-left: 5px solid var(--quote-border);
+  border-radius: 2px;
+  background: var(--quote-background);
+  color: inherit;
+  font-style: normal;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="block_quote"] > [data-syntax="paragraph"] {
+  display: inline;
+  margin: 0;
+}
+
+/* ---------- Code ---------- */
+
+:root[data-profile="vscode"] #editor [data-syntax="code_span"],
+:root[data-profile="vscode"] #editor code {
+  padding: 1px 3px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--code);
+  font-family: var(--profile-mono);
+  font-size: 1em;
+  line-height: 1.357em;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="fenced_code_block"],
+:root[data-profile="vscode"] #editor pre {
+  display: block;
+  margin: 0 0 16px;
+  padding: 16px;
+  overflow: auto;
+  border-radius: 3px;
+  background: var(--code-block-background);
+  color: var(--foreground);
+  font-family: var(--profile-mono);
+  font-size: 1em;
+  line-height: 1.357em;
+}
+
+/* ---------- Lists ---------- */
+
+:root[data-profile="vscode"] #editor [data-syntax="list"],
+:root[data-profile="vscode"] #editor ul,
+:root[data-profile="vscode"] #editor ol {
+  display: block;
+  margin: 0 0 16px;
+  padding-left: 2em;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="list_item"],
+:root[data-profile="vscode"] #editor li {
+  display: block;
+  margin: 0.2em 0;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="list_item"] > [data-syntax="paragraph"] {
+  display: inline;
+  margin: 0;
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="list_item"]::before {
+  color: var(--foreground);
+}
+
+/* ---------- Horizontal rule ---------- */
+
+:root[data-profile="vscode"] #editor [data-syntax="thematic_break"],
+:root[data-profile="vscode"] #editor hr {
+  display: block;
+  height: 0;
+  margin: 16px 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+:root[data-profile="vscode"] #editor [data-syntax="thematic_break"]::after {
+  display: none;
+}
+
+:root[data-profile="vscode"] #editor [data-active][data-syntax="thematic_break"] {
+  height: auto;
+  border: 0;
+  color: inherit;
+}
+
+/* ---------- Images, tables, HTML ---------- */
+
+:root[data-profile="vscode"] #editor [data-preview="image"],
+:root[data-profile="vscode"] #editor [data-preview="table"],
+:root[data-profile="vscode"] #editor [data-syntax="html_block"] {
+  display: block;
+  margin: 0 0 16px;
+}
+
+:root[data-profile="vscode"] #editor table {
+  border-collapse: collapse;
+}
+
+:root[data-profile="vscode"] #editor th,
+:root[data-profile="vscode"] #editor td {
+  padding: var(--table-cell-padding);
+  border: var(--table-cell-border-width) solid var(--table-border-color, var(--border));
+}
+
+:root[data-profile="vscode"] #editor th {
+  border-bottom-width: var(--table-divider-width);
+  font-weight: var(--table-header-weight);
+  background: var(--table-header-background);
+  text-align: start;
+}
+
+:root[data-profile="vscode"] #editor tr + tr > td {
+  border-top-width: var(--table-divider-width);
+}

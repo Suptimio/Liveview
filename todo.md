@@ -1,13 +1,21 @@
-- ">" fixing, remove continous additions when entering lines
+Before any changes, rearrange to maximize efficiency so no redoing is necessary
 
-- Summaries etc. fixing visually (clicking)
+- Implement VS-Code css with dark-style
 
-- Summaries etc. fixing to be spread out before pdf print
+- Implement Dark github+gitlab css
 
-- Tables prebuild no code when clicking, expanding and collapsing rows by dragging corner
+- fix little preview color and css in topbar style previews
 
-- dark style css
+- Implement Math signs
+
+- redesign backround or remove from ui -> make it CLEAN
+
+- Summaries etc. fixing visually (clicking) no ugly html code
+
+- Summaries etc. fixing to be spread out before pdf print (export)
+
+- implement language detect for grammar check
+
+- vid/gif render in pdf by layering frames and cyceling through them
 
 - qol detect lists etc. to autosort
-
-- FIX TABLE RENDER WHEN EMPTY LINE

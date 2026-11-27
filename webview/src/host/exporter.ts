@@ -97,6 +97,8 @@ export async function createPdf(paper: HTMLElement): Promise<string> {
   clone.style.width = `${width}px`;
   clone.style.minHeight = "0";
   clone.style.margin = "0";
+  // Borderless profiles paint the page with a huge paper-colored shadow; not wanted in the PDF.
+  clone.style.boxShadow = "none";
   clone.querySelector<HTMLElement>("#editor")?.style.setProperty("min-height", "0", "important");
   staging.append(clone);
   document.body.append(staging);

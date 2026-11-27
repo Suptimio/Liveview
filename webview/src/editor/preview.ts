@@ -1,4 +1,4 @@
-import syntaxStyle from "./syntax.css?inline";
+import syntaxStyle from "../paper/syntax.css?inline";
 import previewStyle from "./preview.css?inline";
 import editIcon from "./edit.svg?raw";
 import type { VNode } from "./vdom";
@@ -169,6 +169,7 @@ export function patchPreview(
           next?.focus();
         });
         patch(td, cell.children);
+        trimCellPadding(td);
         tr.append(td);
       }
       table.append(tr);
@@ -237,6 +238,28 @@ export function patchPreview(
     output.append(wrapper);
   }
   root.replaceChildren(style, source, decoration);
+}
+
+/**
+ * The cell source range includes the Markdown padding (`| alpha |` -> " alpha ").
+ * Showing those spaces puts invisible positions in front of / behind the text, so
+ * End, clicks after the text and double-clicks land the caret on a space.
+ * Input is trimmed and re-padded in main.ts, so dropping them here is lossless.
+ */
+function trimCellPadding(cell: HTMLElement): void {
+  const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+  const texts: Text[] = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node instanceof Text) texts.push(node);
+  }
+  for (const text of texts) {
+    text.data = text.data.replace(/^[ \t]+/, "");
+    if (text.data) break;
+  }
+  for (const text of texts.reverse()) {
+    text.data = text.data.replace(/[ \t]+$/, "");
+    if (text.data) break;
+  }
 }
 
 function plainText(root: Node): string {
