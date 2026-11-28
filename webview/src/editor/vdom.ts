@@ -10,6 +10,8 @@ export type VNode =
       open?: boolean;
       /** Link target of an inline link. */
       href?: string;
+      /** Footnote number (references and definitions). */
+      number?: number;
       sourceRange?: { start: number; end: number };
       preview?: Preview;
     };
@@ -34,7 +36,7 @@ export function patch(parent: HTMLElement, children: VNode[]): void {
     }
     if (span.dataset.syntax !== child.type) span.dataset.syntax = child.type;
 
-    if (child.type === "atx_heading" && child.start !== undefined) {
+    if ((child.type === "atx_heading" || child.type === "setext_heading") && child.start !== undefined) {
       span.dataset.level = String(child.start);
     } else {
       delete span.dataset.level;
@@ -52,6 +54,12 @@ export function patch(parent: HTMLElement, children: VNode[]): void {
       if (span.dataset.href !== child.href) span.dataset.href = child.href;
     } else if (span.dataset.href !== undefined) {
       delete span.dataset.href;
+    }
+
+    if (child.number !== undefined) {
+      if (span.dataset.number !== String(child.number)) span.dataset.number = String(child.number);
+    } else if (span.dataset.number !== undefined) {
+      delete span.dataset.number;
     }
 
     const counterReset = child.start === undefined ? "" : `markdown-list ${child.start - 1}`;

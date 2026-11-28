@@ -1,5 +1,6 @@
 import { Edit, Language, Parser, type Node, type Range, type Tree } from "web-tree-sitter";
 import runtimeUrl from "web-tree-sitter/web-tree-sitter.wasm?url";
+import { footnoteKey, scanFootnotes } from "./footnotes";
 import type { VNode } from "./vdom";
 
 const voidTags = new Set([
@@ -24,6 +25,46 @@ const lineEndingNodes = new Set(["atx_heading", "list_item", "paragraph"]);
 /** Containers whose children are top-level blocks; `<details>` is only grouped there. */
 const blockContainers = new Set(["document", "section", "details_body"]);
 const detailsOpenTag = /^[ \t]{0,3}<details\b(?:[^>"']|"[^"]*"|'[^']*')*>/i;
+
+/** GFM bare URL ("https://example.com/path"); trailing punctuation is not part of it. */
+const bareUrl = /\bhttps?:\/\/[^\s<>]*[^\s<>.,:;"')\]!?*_~]/g;
+
+/** Reference link labels match case-insensitively, with whitespace collapsed. */
+const labelKey = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
+
+/** Bare URLs in the text of an inline become links (tree-sitter has no GFM autolink extension). */
+function linkBareUrls(nodes: VNode[]): VNode[] {
+  const merged: VNode[] = [];
+  for (const node of nodes) {
+    const last = merged.at(-1);
+    if (typeof node === "string" && typeof last === "string") merged[merged.length - 1] = last + node;
+    else merged.push(node);
+  }
+  return merged.flatMap((node): VNode[] => {
+    if (typeof node !== "string") return [node];
+    const parts: VNode[] = [];
+    let offset = 0;
+    for (const match of node.matchAll(bareUrl)) {
+      if (match.index > offset) parts.push(node.slice(offset, match.index));
+      parts.push({ type: "inline_link", href: match[0], children: [match[0]] });
+      offset = match.index + match[0].length;
+    }
+    if (offset < node.length) parts.push(node.slice(offset));
+    return parts;
+  });
+}
+
+/** The ":" after "[^label]" of a footnote definition becomes part of it (a marker). */
+function attachDefinitionColons(nodes: VNode[]): VNode[] {
+  for (const [index, node] of nodes.entries()) {
+    const next = nodes[index + 1];
+    if (typeof node === "string" || node.type !== "footnote_definition" || typeof next !== "string") continue;
+    if (!next.startsWith(":")) continue;
+    node.children.push({ type: "marker", children: [":"] });
+    nodes[index + 1] = next.slice(1);
+  }
+  return nodes.filter((node) => node !== "");
+}
 
 function htmlEnd(source: string, start: number) {
   const opening = source
@@ -84,6 +125,37 @@ function loadLanguages(): Promise<[Language, Language]> {
   return languages;
 }
 
+/**
+ * Tree-sitter puts the indentation / `>` prefix of a nested block's first line before that block
+ * (often at the end of the previous one). Hidden there it still forms an empty line of its own, so
+ * it is moved to the start of the block it belongs to. Text order (and every offset) is unchanged.
+ */
+function hoistContinuations(nodes: VNode[]): void {
+  const isPrefix = (node: VNode | undefined) =>
+    typeof node === "object" && (node.type === "marker" || node.type === "indent");
+  for (let index = 0; index < nodes.length; index++) {
+    const node = nodes[index];
+    if (typeof node === "string") continue;
+    hoistContinuations(node.children);
+    let next = nodes[index + 1];
+    if (!next || typeof next === "string" || isPrefix(next)) continue;
+    // The line's prefix: this node itself or the last node deep inside it.
+    let siblings = nodes;
+    let at = index;
+    for (let last: VNode | undefined = node; typeof last === "object" && !isPrefix(last); last = siblings[at]) {
+      siblings = last.children;
+      at = siblings.length - 1;
+    }
+    const marker = siblings[at];
+    const before = siblings[at - 1];
+    if (!isPrefix(marker) || typeof marker !== "object" || typeof before !== "string" || !before.endsWith("\n")) continue;
+    siblings.splice(at, 1);
+    if (siblings === nodes) index--;
+    while (next.type === "list" && typeof next.children[0] === "object") next = next.children[0];
+    next.children.unshift(marker);
+  }
+}
+
 /** Creates an independent renderer (own parse state); used by the editor and link previews. */
 export async function createMarkdown() {
   const [blockLanguage, inlineLanguage] = await loadLanguages();
@@ -113,6 +185,20 @@ export async function createMarkdown() {
     blockTree = nextBlockTree;
     const nextInlineTrees: Tree[] = [];
     let coveredUntil = 0;
+
+    const footnotes = scanFootnotes(source);
+    const footnoteDefinitions = new Set(footnotes.definitions.map((definition) => definition.start));
+
+    // "[label]: url" definitions, for reference links anywhere in the document (first one wins).
+    const definitions = new Map<string, string>();
+    for (const definition of blockTree.rootNode.descendantsOfType("link_reference_definition")) {
+      const label = definition?.namedChildren.find((child) => child.type === "link_label");
+      const destination = definition?.namedChildren.find((child) => child.type === "link_destination");
+      const key = label && labelKey(label.text.slice(1, -1));
+      if (key && destination && !definitions.has(key)) {
+        definitions.set(key, destination.text.replace(/^<|>$/g, ""));
+      }
+    }
 
     function children(
       node: Pick<Node, "startIndex" | "endIndex"> & { type?: string },
@@ -214,7 +300,9 @@ export async function createMarkdown() {
       });
       if (!tree) throw new Error(`Tree-sitter could not parse inline Markdown at ${startIndex}.`);
       nextInlineTrees.push(tree);
-      return children({ startIndex, endIndex }, tree.rootNode.children, htmlLimit);
+      // Excluded nodes (`>` / indentation of continuation lines) are rendered as markers in place.
+      const nodes = [...tree.rootNode.children, ...excluded].sort((a, b) => a.startIndex - b.startIndex);
+      return children({ startIndex, endIndex }, nodes, htmlLimit);
     }
 
     function tableRows(start: number, end: number): VNode[] {
@@ -242,7 +330,7 @@ export async function createMarkdown() {
             sourceRange: { start: cellStart, end: cellEnd },
             children: cellText.replace(/\u200B/g, "").trim() === ""
               ? []
-              : inline(cellStart, cellEnd, [], cellEnd),
+              : linkBareUrls(inline(cellStart, cellEnd, [], cellEnd)),
           });
         }
         return [{ type: index === 0 ? "pipe_table_header" : "pipe_table_row", children: cells }];
@@ -450,6 +538,23 @@ export async function createMarkdown() {
           },
         };
       }
+      if (node.type === "setext_heading") {
+        const content = node.namedChildren.find((child) => child.type === "paragraph");
+        const underline = node.namedChildren.find((child) => child.type.startsWith("setext_h"));
+        if (content && underline) {
+          // The underline (with the line break before it) is hidden unless the heading is active.
+          const textEnd = content.endIndex - lineEndingLength(content.endIndex);
+          return {
+            type: node.type,
+            start: underline.type === "setext_h1_underline" ? 1 : 2,
+            children: [
+              ...children({ startIndex: content.startIndex, endIndex: textEnd, type: content.type }, content.children),
+              { type: "setext_underline", children: [source.slice(textEnd, underline.endIndex)] },
+              source.slice(underline.endIndex, node.endIndex),
+            ],
+          };
+        }
+      }
       if (
         node.type === "paragraph" &&
         node.endIndex === source.length &&
@@ -482,7 +587,9 @@ export async function createMarkdown() {
       if (node.type === "inline" || node.type === "pipe_table_cell") {
         return {
           type: node.type,
-          children: inline(node.startIndex, node.endIndex, node.namedChildren, source.length),
+          children: attachDefinitionColons(
+            linkBareUrls(inline(node.startIndex, node.endIndex, node.namedChildren, source.length)),
+          ),
         };
       }
       const marker =
@@ -506,7 +613,12 @@ export async function createMarkdown() {
       }
       if (marker)
         return {
-          type: node.type.startsWith("list_marker_") ? node.type : "marker",
+          // Pure indentation stays hidden even on the active line: CSS already indents the block.
+          type: node.type.startsWith("list_marker_")
+            ? node.type
+            : node.type === "block_continuation" && !source.slice(node.startIndex, node.endIndex).trim()
+              ? "indent"
+              : "marker",
           children: [source.slice(node.startIndex, node.endIndex)],
         };
       if (node.type === "list") {
@@ -519,6 +631,56 @@ export async function createMarkdown() {
             type: node.type,
             children: children(node, node.children),
             start: Number.parseInt(listMarker.text, 10),
+          };
+        }
+      }
+      // "[ ]" / "[x]" of a task list item: drawn as a checkbox (syntax.css), toggled in editor.ts.
+      if (node.type === "task_list_marker_checked" || node.type === "task_list_marker_unchecked") {
+        return { type: node.type, children: [source.slice(node.startIndex, node.endIndex)] };
+      }
+      // <https://...> and <name@host>: a link with "<" ">" as markers.
+      if (node.type === "uri_autolink" || node.type === "email_autolink") {
+        const text = source.slice(node.startIndex + 1, node.endIndex - 1);
+        return {
+          type: "inline_link",
+          href: node.type === "email_autolink" ? `mailto:${text}` : text,
+          children: [{ type: "marker", children: ["<"] }, text, { type: "marker", children: [">"] }],
+        };
+      }
+      // "[^label]": a numbered footnote reference, or the start of its definition ("[^label]:").
+      if (node.type === "shortcut_link") {
+        const label = /^\[\^([^\]\s]+)\]$/.exec(source.slice(node.startIndex, node.endIndex))?.[1];
+        const number = label === undefined ? undefined : footnotes.numbers.get(footnoteKey(label));
+        if (label !== undefined && number !== undefined) {
+          const definition = footnoteDefinitions.has(node.startIndex);
+          return {
+            type: definition ? "footnote_definition" : "footnote_reference",
+            number,
+            // Ctrl+click (links.ts): reference -> its definition, definition -> first reference.
+            href: definition ? `#fnref-${number}` : `#fn-${number}`,
+            children: [
+              { type: "marker", children: ["[^"] },
+              { type: "footnote_label", children: [label] },
+              { type: "marker", children: ["]"] },
+            ],
+          };
+        }
+      }
+      // [text][label], [text][] and [text]: a link when the label is defined; brackets are markers.
+      if (
+        node.type === "full_reference_link" ||
+        node.type === "collapsed_reference_link" ||
+        node.type === "shortcut_link"
+      ) {
+        const label = node.namedChildren.find((child) => child.type === "link_label");
+        const text = node.namedChildren.find((child) => child.type === "link_text");
+        const key = label ? labelKey(label.text.slice(1, -1)) : text && labelKey(text.text);
+        const href = key ? definitions.get(key) : undefined;
+        if (href !== undefined) {
+          return {
+            type: "inline_link",
+            href,
+            children: children({ startIndex: node.startIndex, endIndex: node.endIndex, type: "inline_link" }, node.children),
           };
         }
       }
@@ -536,6 +698,7 @@ export async function createMarkdown() {
     }
 
     const result = children(blockTree.rootNode, blockTree.rootNode.children);
+    hoistContinuations(result);
     for (const tree of inlineTrees) tree.delete();
     inlineTrees = nextInlineTrees;
     return result;

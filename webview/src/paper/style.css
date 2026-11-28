@@ -97,3 +97,35 @@
 #editor *::selection {
   background: var(--selection);
 }
+
+/* Source line number of the hovered line, in the paper's left margin (editor/line-hint.ts). */
+.line-hint {
+  position: fixed;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font: 11px/1 ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Pen at the right edge of a hovered line with inline HTML (editor/html-pen.ts); looks like .edit-html. */
+.html-line-edit {
+  position: fixed;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.html-line-edit[hidden] {
+  display: none;
+}

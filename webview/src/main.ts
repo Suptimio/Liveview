@@ -8,6 +8,8 @@
 import { listActions } from "./actions/list";
 import { insertTableAction } from "./actions/table";
 import { createEditor } from "./editor/editor";
+import { setupInlineHtmlPen } from "./editor/html-pen";
+import { setupLineHint } from "./editor/line-hint";
 import { setupLinks } from "./editor/links";
 import { setupExporter } from "./host/exporter";
 import { byId } from "./ui/dom";
@@ -55,6 +57,8 @@ try {
   const editor = createEditor(editorElement, await createMarkdown());
   setupToolMenu(editor, [insertTableAction, ...listActions]);
   setupLinks(editorElement);
+  setupLineHint(editorElement, byId("paper"));
+  setupInlineHtmlPen(editorElement, byId("paper"));
 } catch (error) {
   showFatalError(editorElement, error, "Could not start the Markdown editor.");
 }

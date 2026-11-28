@@ -181,33 +181,27 @@ export function createEditor(editor: HTMLElement, markdown: Markdown): EditorCon
     insertText(`\n${quotePrefix}`);
   }
 
-  function materializeLazyBlockQuote(): void {
+  /**
+   * Backspace right after / Delete right before a rendered image removes the whole image, like in
+   * a word processor (the browser cannot delete into the preview and would do nothing).
+   */
+  function deleteAdjacentImage(inputType: string): boolean {
+    const backward = inputType === "deleteContentBackward";
+    if (!backward && inputType !== "deleteContentForward") return false;
     const selection = readSelection(editor);
-    const focusNode = window.getSelection()?.focusNode;
-    if (!selection || selection.anchor !== selection.focus || !focusNode) return;
-
-    let element = focusNode instanceof Element ? focusNode : focusNode.parentElement;
-    let quoteDepth = 0;
-    while (element && element !== editor) {
-      if (element.getAttribute("data-syntax") === "block_quote") quoteDepth++;
-      element = element.parentElement;
+    if (!selection || selection.anchor !== selection.focus) return false;
+    for (const image of editor.querySelectorAll<HTMLElement>('[data-preview="image"]:not([data-active])')) {
+      const before = document.createRange();
+      before.selectNodeContents(editor);
+      before.setEndBefore(image);
+      const start = before.toString().length;
+      const end = start + (image.textContent?.length ?? 0);
+      if (selection.focus === (backward ? end : start)) {
+        replaceText(start, end, "");
+        return true;
+      }
     }
-    if (!quoteDepth) return;
-
-    const lineStart = currentSource.lastIndexOf("\n", selection.focus - 1) + 1;
-    const nextLineBreak = currentSource.indexOf("\n", selection.focus);
-    const lineEnd = nextLineBreak === -1 ? currentSource.length : nextLineBreak;
-    const line = currentSource.slice(lineStart, lineEnd);
-    const indentation = line.match(/^[ \t]{0,3}/)?.[0] ?? "";
-    if (line.slice(indentation.length).startsWith(">")) return;
-
-    const marker = "> ".repeat(quoteDepth);
-    const insertAt = lineStart + indentation.length;
-    const moveOffset = (offset: number) => (offset >= insertAt ? offset + marker.length : offset);
-    localChange(
-      `${currentSource.slice(0, insertAt)}${marker}${currentSource.slice(insertAt)}`,
-      { anchor: moveOffset(selection.anchor), focus: moveOffset(selection.focus) },
-    );
+    return false;
   }
 
   update("");
@@ -276,7 +270,8 @@ export function createEditor(editor: HTMLElement, markdown: Markdown): EditorCon
     )
       return;
     tableCellEditing = true;
-    const escape = (text: string) => text.replaceAll("|", "\\|").replaceAll("\n", " ");
+    // Pipes that are already escaped ("\|") stay as they are.
+    const escape = (text: string) => text.replace(/(?<!\\)\|/g, "\\|").replaceAll("\n", " ");
     const host = event.target;
     if (!(host instanceof HTMLElement)) return;
     const tableStart = Number(host.dataset.sourceStart);
@@ -368,6 +363,10 @@ export function createEditor(editor: HTMLElement, markdown: Markdown): EditorCon
       event.preventDefault();
       insertParagraph();
     } else if (event.inputType.startsWith("delete")) {
+      if (deleteAdjacentImage(event.inputType)) {
+        event.preventDefault();
+        return;
+      }
       const range = event.getTargetRanges()[0];
       if (range) {
         event.preventDefault();
@@ -389,7 +388,6 @@ export function createEditor(editor: HTMLElement, markdown: Markdown): EditorCon
     event.preventDefault();
     insertText(event.clipboardData?.getData("text/plain").replaceAll("\r\n", "\n") ?? "");
   });
-  editor.addEventListener("pointerup", materializeLazyBlockQuote);
   editor.addEventListener(
     "pointerdown",
     (event) => {
@@ -458,6 +456,21 @@ export function createEditor(editor: HTMLElement, markdown: Markdown): EditorCon
         );
     window.getSelection()?.setBaseAndExtent(text, position, text, position);
     syncActiveLine();
+  });
+  // Clicking a task checkbox toggles "[ ]" <-> "[x]" without moving the caret there.
+  editor.addEventListener("mousedown", (event) => {
+    if (event.button !== 0 || !(event.target instanceof Element)) return;
+    const box = event.target.closest<HTMLElement>('[data-syntax^="task_list_marker_"]:not([data-active])');
+    if (!box || !editor.contains(box)) return;
+    event.preventDefault();
+    const before = document.createRange();
+    before.selectNodeContents(editor);
+    before.setEndBefore(box);
+    const start = before.toString().length;
+    const checked = box.dataset.syntax === "task_list_marker_checked";
+    const source = currentSource;
+    if (!/^\[[ xX]\]$/.test(source.slice(start, start + 3))) return;
+    localChange(source.slice(0, start) + (checked ? "[ ]" : "[x]") + source.slice(start + 3));
   });
   document.addEventListener("selectionchange", syncActiveLine);
   editor.addEventListener("focus", syncActiveLine);

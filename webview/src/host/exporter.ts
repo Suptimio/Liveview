@@ -30,7 +30,7 @@ async function embedLocalImages(paper: HTMLElement): Promise<void> {
 export function cloneForExport(node: Node, shadowStyles: Set<string>): Node | undefined {
   if (node instanceof Element) {
     if (["SCRIPT", "IFRAME", "OBJECT", "EMBED"].includes(node.tagName)) return;
-    if (node.matches(".source, .edit-html, [data-caret-placeholder]")) return;
+    if (node.matches(".source, .edit-html, .line-hint, .html-line-edit, [data-caret-placeholder]")) return;
 
     const clone = node.cloneNode(false) as Element;
     clone.removeAttribute("data-active");

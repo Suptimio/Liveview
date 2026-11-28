@@ -591,7 +591,8 @@ main {
    shows that file as a scaled-down paper. Ctrl/Cmd marks links clickable.
    ==================================================================== */
 
-#editor.is-link-mode [data-syntax="inline_link"][data-href] {
+#editor.is-link-mode [data-syntax="inline_link"][data-href],
+#editor.is-link-mode [data-syntax^="footnote_"][data-href] {
   cursor: pointer;
 }
 

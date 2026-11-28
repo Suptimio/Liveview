@@ -12,7 +12,9 @@
 	contain: content;
 	pointer-events: none;
 }
-:host([data-preview="table"]) .preview {
+:host([data-preview="table"]) .preview,
+/* The whole image takes the click (preview.ts), not only the text-line-high strip in its middle. */
+:host([data-preview="image"]) .preview {
 	pointer-events: auto;
 }
 .html-preview {
@@ -61,6 +63,14 @@
 :host([data-syntax="html_block"]) .html-preview {
 	display: block;
 }
+/* Inline HTML (<sup>, <kbd>, ...): no pen (and no gap for it) per element; editor/html-pen.ts shows one per line. */
+:host([data-syntax="html_inline"]) .html-preview {
+	padding-right: 0;
+	min-height: 0;
+}
+:host([data-syntax="html_inline"]) .edit-html {
+	display: none;
+}
 :host([data-active]) .html-preview {
 	display: none;
 }
@@ -94,6 +104,23 @@ img {
 	max-width: 100%;
 	max-height: 400px;
 	object-fit: contain;
+}
+/* Image that failed to load: a visible placeholder, not just a line of text. */
+.image-missing {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	border: 1px dashed var(--border);
+	border-radius: 4px;
+	background: var(--surface);
+	color: var(--muted);
+	font-size: 0.875em;
+}
+.image-missing svg {
+	flex: none;
+	width: 20px;
+	height: 20px;
 }
 table {
 	border-collapse: collapse;
@@ -141,6 +168,19 @@ th[contenteditable="true"] {
 td[contenteditable="true"]:focus,
 th[contenteditable="true"]:focus {
 	box-shadow: inset 0 0 0 2px var(--accent);
+}
+/* The cell being edited shows its Markdown markers ("**", "[", "](url)"), like the active line. */
+td:focus [data-syntax="marker"],
+th:focus [data-syntax="marker"] {
+	font-size: inherit;
+	opacity: 1;
+	color: var(--marker);
+	font-weight: 400;
+	text-decoration: none;
+}
+/* Ctrl/Cmd held (editor/links.ts): links in cells are clickable, like in the text. */
+:host-context(#editor.is-link-mode) [data-syntax="inline_link"][data-href] {
+	cursor: pointer;
 }
 th {
 	background: var(--table-header-background, var(--surface));

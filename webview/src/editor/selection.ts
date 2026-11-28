@@ -107,7 +107,7 @@ export function revealSyntax(editor: HTMLElement) {
     const lineBreak = source.indexOf("\n", focusOffset);
     const lineEnd = lineBreak === -1 ? source.length : lineBreak;
     for (const marker of editor.querySelectorAll<HTMLElement>(
-      '[data-syntax="marker"], [data-syntax^="list_marker_"]',
+      '[data-syntax="marker"], [data-syntax^="list_marker_"], [data-syntax^="task_list_marker_"]',
     )) {
       const range = document.createRange();
       range.selectNodeContents(editor);

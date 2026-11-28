@@ -1,21 +1,23 @@
-Before any changes, rearrange to maximize efficiency so no redoing is necessary
-
-- Implement VS-Code css with dark-style
-
-- Implement Dark github+gitlab css
-
-- fix little preview color and css in topbar style previews
-
 - Implement Math signs
-
-- redesign backround or remove from ui -> make it CLEAN
 
 - Summaries etc. fixing visually (clicking) no ugly html code
 
 - Summaries etc. fixing to be spread out before pdf print (export)
+
+- Paragraph fix ( foot notes and qol)
 
 - implement language detect for grammar check
 
 - vid/gif render in pdf by layering frames and cyceling through them
 
 - qol detect lists etc. to autosort
+
+- fix templates /export template and when user inputs css
+
+- document code
+
+- update licence, readme and any other .md
+
+- test
+
+- publish

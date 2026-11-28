@@ -12,8 +12,40 @@ const hideDelay = 200;
 
 type LinkedFile = { text?: string; baseUri?: string; error?: string };
 
-function linkAt(target: EventTarget | null): HTMLElement | null {
-  return target instanceof Element ? target.closest<HTMLElement>('[data-syntax="inline_link"][data-href]') : null;
+/**
+ * The link under the event. composedPath() also reaches links inside table cells and links
+ * whose element still carries a preview's shadow root (e.g. an image whose "!" was deleted).
+ */
+const links = '[data-syntax="inline_link"][data-href], [data-syntax^="footnote_"][data-href]';
+
+function linkAt(event: Event): HTMLElement | null {
+  for (const target of event.composedPath()) {
+    if (target instanceof HTMLElement && target.matches(links)) return target;
+  }
+  return null;
+}
+
+/** GitHub's heading anchor: lower case, punctuation dropped, spaces as "-". */
+const slug = (text: string) =>
+  text.trim().toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s/g, "-");
+
+/** Scrolls to the heading a "#anchor" link points to (repeated titles get "-1", "-2", like on GitHub). */
+function scrollToHeading(editor: HTMLElement, anchor: string): void {
+  const counts = new Map<string, number>();
+  for (const heading of editor.querySelectorAll<HTMLElement>('[data-syntax="atx_heading"], [data-syntax="setext_heading"]')) {
+    let text = "";
+    const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.parentElement?.closest('[data-syntax="marker"], [data-syntax="setext_underline"]')) text += node.textContent;
+    }
+    const base = slug(text);
+    const count = counts.get(base) ?? 0;
+    counts.set(base, count + 1);
+    if ((count ? `${base}-${count}` : base) === anchor) {
+      heading.scrollIntoView({ block: "start" });
+      return;
+    }
+  }
 }
 
 const attribute = (value: string) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
@@ -24,11 +56,29 @@ export function setupLinks(editor: HTMLElement): void {
   editor.addEventListener(
     "pointerdown",
     (event) => {
-      const link = linkAt(event.target);
+      const link = linkAt(event);
       if (!link?.dataset.href || event.button !== 0 || !(event.ctrlKey || event.metaKey)) return;
       event.preventDefault();
       event.stopPropagation();
-      postToHost({ type: "open-link", href: link.dataset.href });
+      const href = link.dataset.href;
+      // Footnotes (markdown.ts): "#fn-N" is definition N, "#fnref-N" the first reference to N.
+      const footnote = /^#fn(ref)?-(\d+)$/.exec(href);
+      if (footnote) {
+        const target = footnote[1] ? "footnote_reference" : "footnote_definition";
+        editor.querySelector(`[data-syntax="${target}"][data-number="${footnote[2]}"]`)?.scrollIntoView({ block: "center" });
+        return;
+      }
+      if (href.startsWith("#")) {
+        let anchor = href.slice(1);
+        try {
+          anchor = decodeURIComponent(anchor);
+        } catch {
+          // Keep the raw text when it is not valid percent-encoding.
+        }
+        scrollToHeading(editor, anchor.toLowerCase());
+        return;
+      }
+      postToHost({ type: "open-link", href });
     },
     true,
   );
@@ -170,7 +220,7 @@ html, body { margin: 0; }
   }
 
   editor.addEventListener("pointerover", (event) => {
-    const link = linkAt(event.target);
+    const link = linkAt(event);
     if (!link || !markdownLink.test(link.dataset.href ?? "")) return;
     window.clearTimeout(hideTimer);
     if (link === current) return;
@@ -178,7 +228,7 @@ html, body { margin: 0; }
     showTimer = window.setTimeout(() => void show(link), hoverDelay);
   });
   editor.addEventListener("pointerout", (event) => {
-    const link = linkAt(event.target);
+    const link = linkAt(event);
     if (!link || (event.relatedTarget instanceof Node && link.contains(event.relatedTarget))) return;
     window.clearTimeout(showTimer);
     hideLater();

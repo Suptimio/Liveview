@@ -2,6 +2,7 @@
 import close from "./close.svg?raw";
 import edit from "./edit.svg?raw";
 import exportIcon from "./export.svg?raw";
+import imageMissing from "./image-missing.svg?raw";
 import sortAz from "./sort-az.svg?raw";
 import sortNumbers from "./sort-numbers.svg?raw";
 import sortZa from "./sort-za.svg?raw";
@@ -16,6 +17,7 @@ export const icons = {
   close,
   edit,
   export: exportIcon,
+  "image-missing": imageMissing,
   "sort-az": sortAz,
   "sort-numbers": sortNumbers,
   "sort-za": sortZa,

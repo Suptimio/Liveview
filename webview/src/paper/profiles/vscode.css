@@ -121,6 +121,7 @@
 }
 
 :root[data-profile="vscode"] #editor [data-syntax="atx_heading"][data-level="1"],
+:root[data-profile="vscode"] #editor [data-syntax="setext_heading"][data-level="1"],
 :root[data-profile="vscode"] #editor h1 {
   margin-top: 0;
   padding-bottom: 0.3em;
@@ -130,6 +131,7 @@
 }
 
 :root[data-profile="vscode"] #editor [data-syntax="atx_heading"][data-level="2"],
+:root[data-profile="vscode"] #editor [data-syntax="setext_heading"][data-level="2"],
 :root[data-profile="vscode"] #editor h2 {
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--border);

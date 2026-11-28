@@ -23,6 +23,21 @@ function editSource(host: HTMLElement) {
   window.getSelection()?.setPosition(host.firstChild ?? host, 0);
 }
 
+/**
+ * A click on rendered HTML opens its source, like an image, unless it hits something interactive
+ * in it (link, button, the edit pen, <summary>, form field) or the HTML is a <details> title.
+ */
+function keepsClick(event: Event, host: HTMLElement): boolean {
+  if (host.closest('[data-syntax="details_label"]')) return true;
+  for (const target of event.composedPath()) {
+    if (target === host) return false;
+    if (target instanceof Element && target.matches("a[href], button, summary, input, select, textarea, label, video, audio")) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function patchPreview(
   host: HTMLElement,
   preview: Preview | undefined,
@@ -49,14 +64,20 @@ export function patchPreview(
   if (previews.get(host) === key) return;
   const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
   if (!host.shadowRoot?.childNodes.length) {
-    host.addEventListener("click", () => {
+    // On mousedown, not click: the browser's own caret placement (and the re-render it causes)
+    // can move things between press and release, and then no click event fires at all.
+    host.addEventListener("mousedown", (event) => {
       if (
+        event.button !== 0 ||
+        event.ctrlKey ||
+        event.metaKey ||
         !host.hasAttribute("data-preview") ||
-        host.dataset.preview === "html" ||
         host.dataset.preview === "table" ||
+        (host.dataset.preview === "html" && keepsClick(event, host)) ||
         host.hasAttribute("data-active")
       )
         return;
+      event.preventDefault();
       editSource(host);
     });
     for (const type of ["beforeinput", "input", "keydown", "paste", "compositionend", "drop"]) {
@@ -74,7 +95,6 @@ export function patchPreview(
   const output = document.createElement("span");
   output.className = "preview";
   output.contentEditable = "false";
-  output.inert = preview.kind !== "html" && preview.kind !== "table";
   let decoration = output;
   if (preview.kind === "html") {
     const html = document.createElement("span");
@@ -108,7 +128,11 @@ export function patchPreview(
       image.referrerPolicy = "no-referrer";
       image.src = url.href;
       image.addEventListener("error", () => {
-        image.replaceWith(document.createTextNode(`Could not load image: ${preview.src}`));
+        const missing = document.createElement("span");
+        missing.className = "image-missing";
+        missing.innerHTML = icons["image-missing"];
+        missing.append(`Could not load image: ${preview.src}`);
+        image.replaceWith(missing);
       });
       output.append(image);
     } else {
@@ -265,9 +289,8 @@ function trimCellPadding(cell: HTMLElement): void {
 function plainText(root: Node): string {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let text = "";
+  // Markers ("**", "[", "](url)") are part of the cell's Markdown: dropping them loses formatting.
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const parent = node.parentElement;
-    if (parent?.closest('[data-syntax="marker"], [data-syntax^="list_marker_"]')) continue;
     text += node.textContent ?? "";
   }
   return text.replaceAll("\n", " ");
